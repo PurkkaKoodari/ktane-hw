@@ -1,7 +1,8 @@
 # Bus protocol
 
-This document specifies the protocol used for communication over the CAN bus
-between modules and the main controller.
+This document specifies the protocol used for communication over the CAN bus between modules and the main controller.
+
+This specification is version `1.0-alpha2`.
 
 ## Definitions
 
@@ -10,20 +11,50 @@ In this document, the following terms and abbreviations are used:
 - **MC** = **main controller** = the device that stores the states of all modules
 - **module** = the swappable modules that are visible to the user
 
+## Message types
+
+Both the MC and modules can initiate messages.
+
+The MC can send _request_ messages to modules. Some _requests_ require _responses_ from the modules. With the exception of Reset (0x00), responses SHOULD use the same message ID as the request.
+
+Only the MC can send _broadcast_ messages to all modules. With the exception of Reset (0x00), broadcast messages do not require responses.
+
+Modules can send _event_ messages to the MC. Event messages MUST NOT require responses from the MC. After sending an event message, a module MUST be ready to receive any unrelated message; state changes caused by event messages are to be handled asynchronously.
+
+## Module states
+
+When a module is powered up, it is in _power-on mode_. Modules in this mode MUST NOT react to any message except for the Reset (0x00) message.
+
+When a module receives a Reset (0x00) message, it enters _reset mode_. Modules in this mode MUST set the MODULE_READY signal low, MUST NOT respond to Ping (0x02) messages and SHOULD NOT send any messages before they receive an Initialize (0x01) message.
+
+When a module in _reset mode_ receives an Initialize (0x01) message, it enters _configuration mode_. This mode is used to send game settings to modules using module-specific messages.
+
+When a module in _configuration mode_ receives an Launch game (0x10) message, it enters _game mode_. In this mode, messages 0x11-0x17 are used to control the in-game state of the module.
+
+_Game mode_ is only exited by a Reset (0x00) message.
+
+## Errors
+
+If a module detects an error state, it SHOULD attempt to send a suitable error message (message IDs 0x20-0x23).
+
+If an unrecoverable error occurs in relation to a message from the MC that requires a response, a module MAY respond with only an error message.
+
+If a module in _reset mode_ detects an error state, it SHOULD delay reporting it until it receives the Initialize (0x01) message.
+
 ## Message format
 
 All messages MUST have a 29-bit extended identifier. The identifier value is constructed as follows (in big-endian bit order):
 
 | Bits | Length | Field | Description |
 |------|--------|-------|-------------|
-| 0 | 1 | direction | 0 = MC to module<br>1 = module to MC<br>This ensures that messages from the MC have priority. <!-- TODO: is this what we want? --> |
+| 0 | 1 | direction | 0 = MC to module, 1 = module to MC |
 | 1-12 | 12 | module type | Identifies the physical type of module. Different modules that are physically identical SHOULD use the same type. See the module types in the appendix. |
 | 13-22 | 10 | module serial | Identifies modules of the same type. MUST be unique between modules of the same type in the same bomb. |
-| 23-28 | 6 | message type | Identifies the type of message. MUST be one of the message types listed below. |
+| 23-28 | 6 | message ID | Identifies the type of message. MUST be one of the message IDs listed below. |
 
-If `module type` is zero, `module serial` MUST also be zero, and the message is a broadcast message to all modules on the bomb.
+If `module type` is zero, `module serial` and `direction` MUST also be zero, and the message is a _broadcast message_.
 
-A message may have 0-8 bytes of data, depending on the message type.
+A message MAY have 0-8 bytes of data, specified by the message ID.
 
 ## Message routing
 
@@ -35,45 +66,31 @@ All modules MUST have a constant `module type` and `module serial` that do not c
 
 All modules MUST listen to all messages with `direction = 0` where `module type = 0` OR `module type` and `module serial` match the module's values. Modules MUST only send messages with `direction = 1` and `module type` and `module serial` matching the module's values.
 
-## Requests and responses
+## Message IDs
 
-Both the MC and modules can initiate messages.
+The following message IDs are defined:
 
-Some messages sent by the MC require responses from the modules. With the exception of Reset (0x00), the responses SHOULD use the same message ID as the request.
+| Number | Name | Type | Data length | Valid in modes |
+|--------|------|------|-------------|----------------|
+| 0x00 | Reset | broadcast | 0 | all |
+| 0x01 | Announce | event | 4 | reset |
+| 0x02 | Initialize | request | 4 | reset |
+| 0x03 | Ping | request, response | 0 | configuration, game |
+| 0x10 | Launch game | broadcast | 0 | configuration |
+| 0x11 | Start timer | broadcast | 0 | game |
+| 0x12 | Explode | broadcast | 0 | game |
+| 0x13 | Defuse | broadcast | 0 | game |
+| 0x14 | Strike | request | 0 | game |
+| 0x15 | Solve | request | 0 | game |
+| 0x16 | Needy activate | request | 0 | game |
+| 0x17 | Needy deactivate | request | 0 | game |
+| 0x20 | Recoverable error | event | 1-8 | all |
+| 0x21 | Recovered error | event | 1-8 | all |
+| 0x22 | Minor unrecoverable error | event | 1-8 | all |
+| 0x23 | Major unrecoverable error | event | 1-8 | all |
+| 0x3* | Module-specific | defined by module | 0-8 | configuration, game |
 
-Messages sent by the modules MUST NOT require responses from the MC. After sending a message, a module MUST be ready to receive any unrelated message; state changes caused by input events are handled asynchronously.
-
-## Errors
-
-If a module detects an error state, it SHOULD attempt to send a suitable error message (message types 0x20-0x23).
-
-If an unrecoverable error occurs in relation to a message from the MC that requires a response, a module MAY respond with only an error message.
-
-## Message types
-
-The following message types are defined:
-
-| Number | Name | Direction | Data length |
-|--------|------|-----------|-------------|
-| 0x00 | Reset | MC&rarr;module | 0 |
-| 0x01 | Initialize | MC&rarr;module | 4 |
-| 0x01 | Initialize | module&rarr;MC | 4 |
-| 0x02 | Ping | MC&rarr;module | 0 |
-| 0x02 | Pong | module&rarr;MC | 0 |
-| 0x10 | Launch game | MC&rarr;module | 0 |
-| 0x11 | Start timer | MC&rarr;module | 0 |
-| 0x12 | Strike | MC&rarr;module | 0 |
-| 0x13 | Solve | MC&rarr;module | 0 |
-| 0x14 | Needy activate | MC&rarr;module | 0 |
-| 0x15 | Needy deactivate | MC&rarr;module | 0 |
-| 0x20 | Recoverable error | module&rarr;MC | 1-8 |
-| 0x21 | Recovered error | module&rarr;MC | 1-8 |
-| 0x22 | Minor unrecoverable error | module&rarr;MC | 1-8 |
-| 0x23 | Major unrecoverable error | module&rarr;MC | 1-8 |
-| 0x3* | Module-specific | MC&rarr;module | 0-8 |
-| 0x3* | Module-specific | module&rarr;MC | 0-8 |
-
-Each message type is described in detail below.
+Each message ID is described in detail below.
 
 ### ID 0x00: Reset
 
@@ -86,7 +103,7 @@ Upon receiving it, a module MUST perform a soft reset:
 - Reset all state variables to their initial state
 - Restore user interface elements to their initial state
 
-After performing the reset, the module SHOULD wait for a random amount of time (between 0ms and 100ms) in order to avoid bus collisions. After waiting, the module MUST respond with a Initialize (0x01) message with the following data:
+After performing the reset, the module MUST respond with a Initialize (0x01) message with the following data:
 
 | Bits | Length | Field | Description |
 |------|--------|-------|-------------|
@@ -95,13 +112,13 @@ After performing the reset, the module SHOULD wait for a random amount of time (
 | 16-23 | 8 | major software version | The major version number of the module software. |
 | 24-31 | 8 | minor software version | The minor version number of the module software. |
 
-After sending the response, the module MUST stay in stand-by mode waiting for the Initialize (0x01) message, perfoming minimal other actions.
+Before sending a response the module MUST wait between 500ms and 750ms to allow all modules to reset. The wait duration SHOULD be random in order to avoid bus collisions; a hardcoded value that varies for each module suffices.
 
-If a module in reset stand-by mode detects an error state, it SHOULD delay reporting it until it receives the Initialize (0x01) message.
+After sending the response, the module SHOULD perfoming minimal actions while waiting for the Initialize (0x01) message.
 
 ### ID 0x01: Initialize
 
-This message is sent by the MC. The message contains the following data:
+This message is sent by the MC. It is only valid for modules in _reset mode_. The message contains the following data:
 
 | Bits | Length | Field | Description |
 |------|--------|-------|-------------|
@@ -110,7 +127,7 @@ This message is sent by the MC. The message contains the following data:
 | 16-23 | 8 | major software version | The major version number of the software of the MC and constant bomb hardware. |
 | 24-31 | 8 | minor software version | The minor version number of the software of the MC and constant bomb hardware. |
 
-Upon receiving the message, a module MUST set the MODULE_READY signal high.
+Upon receiving the message, a module MUST set the MODULE_READY signal high and enter _configuration mode_.
 
 If the module detects an unrecoverable error before or during this message, the module MAY keep the MODULE_READY signal low in addition to sending an error message.
 
@@ -118,47 +135,49 @@ The version numbers can be used by both ends of the communication to update a mo
 
 ### ID 0x02: Ping
 
-This message is sent by the MC. The message contains no data.
+This message is sent by the MC. It is only valid for modules in _configuration mode_ and _game mode_. The message contains no data.
 
 Upon receiving the message, a module MUST respond with a Pong (0x02) message with no data.
 
+However, a module that is in _reset mode_ MUST NOT respond to a Ping (0x02) message.
+
 ### ID 0x10: Launch game
 
-This message is sent by the MC as a broadcast message. The message contains no data.
+This message is sent by the MC as a broadcast message. It is only valid for modules in _configuration mode_. The message contains no data.
 
-This message marks the start of the game. Upon receiving the message, modules MUST set their user interface to the pre-start state.
+This message marks the start of the game. Upon receiving the message, modules MUST enter _game mode_ and set their user interface to the pre-game state. Input events MAY be sent after this message is received.
 
-The MC MUST give any data relevant
+The MC MUST send any game configuration data to all modules prior to this message.
 
 ### ID 0x11: Start timer
 
-This message is sent by the MC as a broadcast message. The message contains no data.
+This message is sent by the MC as a broadcast message. It is only valid for modules in _game mode_. The message contains no data.
 
-This message marks the time when the timer starts and the lights turn on. Upon receiving this message, modules MUST set their user interface to their in-game state.
+This message marks the time when the timer starts and the lights turn on. Upon receiving this message, modules MUST set their user interface to the in-game state.
 
-### ID 0x12: Strike
+### ID 0x12/0x13: Explode/Defuse
 
-This message is sent by the MC. The message contains no data.
+These messages are sent by the MC as broadcast messages. They are only valid for modules in _game mode_. The messages contain no data.
 
-Upon receiving this message, a module MUST indicate visually that a strike occurred if such an indicator is present on the module.
+These messages mark the bomb exploding or being defused. Upon receiving these messages, modules MUST set their user interface to the post-game state. This state will last until a Reset (0x00) message from the MC.
 
-Note that with some modded modules this may not mean the strike counter was incremented.
+### ID 0x14/0x15: Strike/Solve
 
-### ID 0x13: Solve
+These message are sent by the MC. They are only valid for modules in _game mode_. The messages contain no data.
 
-This message is sent by the MC. The message contains no data. This message is only valid for solvable modules.
+Upon receiving this message, a module MUST indicate visually that a strike occurred or the module was solved, if such an indicator is present on the module, and MAY stop sending input events if the module was solved.
 
-Upon receiving this message, a module MUST indicate visually that it was solved if such an indicator is present on the module.
+If a modded module uses the strike or solve indicator in a way that does not actually count as a strike or solved module, it MUST use a module-specific message to indicate these states. These messages are reserved for real strikes and solved modules.
 
-### ID 0x14/0x15: Needy activate/deactivate
+### ID 0x16/0x17: Needy activate/deactivate
 
-These messages are sent by the MC. The messages contains no data. These messages are only valid for needy modules.
+These messages are sent by the MC. They are only valid for needy modules in _game mode_. The messages contain no data.
 
 Upon receiving this message, a module MUST activate or deactivate their module-specific needy task.
 
 ### ID 0x20-0x23: Module errors
 
-This message is sent by a module. The message contains the following data:
+These messages are sent by a module. They are valid for modules in all modes. The messages contain the following data:
 
 | Bits | Length | Field | Description |
 |------|--------|-------|-------------|
@@ -177,7 +196,7 @@ If an error condition is detected and immediately recovered from, only a Recover
 
 ### ID 0x30-0x3f: Module-specific commands
 
-These messages are defined for each module separately. They are used to query and update module state by the MC and to indicate input events by the modules.
+These messages are defined for each module separately. They can be sent by the MC or by a module. They are only valid for modules in _configuration mode_ and _game mode_. They are used to query and update module state by the MC and to indicate input events by the modules.
 
 ## Appendix: Module type identifiers
 
@@ -208,4 +227,8 @@ The following table contains the defined module types:
 
 | Code | Name | Description |
 |------|------|-------------|
-| 0 | _TODO_ | _TODO_ |
+| 0 | invalid message | The module received a message it could not understand or that was invalid for the module's current state. |
+| 1 | hardware error | The module encountered an unknown hardware error. |
+| 2 | software error | The module encountered an unknown software error. |
+| 3-15 | _reserved_ | Reserved for future standard errors. |
+| 16-255 | _module-specific_ | Defined for each module separately. |

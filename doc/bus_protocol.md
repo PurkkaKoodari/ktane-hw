@@ -2,7 +2,7 @@
 
 This document specifies the protocol used for communication over the CAN bus between modules and the main controller.
 
-This specification is version `1.0-alpha2`.
+This specification is version `1.0-alpha3`.
 
 ## Definitions
 
@@ -25,9 +25,9 @@ Modules can send _event_ messages to the MC. Event messages MUST NOT require res
 
 When a module is powered up, it is in _power-on mode_. Modules in this mode MUST NOT react to any message except for the Reset (0x00) message.
 
-When a module receives a Reset (0x00) message, it enters _reset mode_. Modules in this mode MUST set the MODULE_READY signal low, MUST NOT respond to Ping (0x02) messages and SHOULD NOT send any messages before they receive an Initialize (0x01) message.
+When a module receives a Reset (0x00) message, it enters _reset mode_. Modules in this mode MUST set the MODULE_READY signal low, MUST NOT respond to Ping (0x03) messages and SHOULD NOT send any messages before they receive an Initialize (0x02) message.
 
-When a module in _reset mode_ receives an Initialize (0x01) message, it enters _configuration mode_. This mode is used to send game settings to modules using module-specific messages.
+When a module in _reset mode_ receives an Initialize (0x02) message, it enters _configuration mode_. This mode is used to send game settings to modules using module-specific messages.
 
 When a module in _configuration mode_ receives an Launch game (0x10) message, it enters _game mode_. In this mode, messages 0x11-0x17 are used to control the in-game state of the module.
 
@@ -39,7 +39,7 @@ If a module detects an error state, it SHOULD attempt to send a suitable error m
 
 If an unrecoverable error occurs in relation to a message from the MC that requires a response, a module MAY respond with only an error message.
 
-If a module in _reset mode_ detects an error state, it SHOULD delay reporting it until it receives the Initialize (0x01) message.
+If a module in _reset mode_ detects an error state, it SHOULD delay reporting it until it receives the Initialize (0x02) message.
 
 ## Message format
 
@@ -103,7 +103,7 @@ Upon receiving it, a module MUST perform a soft reset:
 - Reset all state variables to their initial state
 - Restore user interface elements to their initial state
 
-After performing the reset, the module MUST respond with a Initialize (0x01) message with the following data:
+After performing the reset, the module MUST respond with a Announce (0x01) message with the following data:
 
 | Bits | Length | Field | Description |
 |------|--------|-------|-------------|
@@ -114,9 +114,9 @@ After performing the reset, the module MUST respond with a Initialize (0x01) mes
 
 Before sending a response the module MUST wait between 500ms and 750ms to allow all modules to reset. The wait duration SHOULD be random in order to avoid bus collisions; a hardcoded value that varies for each module suffices.
 
-After sending the response, the module SHOULD perfoming minimal actions while waiting for the Initialize (0x01) message.
+After sending the response, the module SHOULD perfoming minimal actions while waiting for the Initialize (0x02) message.
 
-### ID 0x01: Initialize
+### ID 0x02: Initialize
 
 This message is sent by the MC. It is only valid for modules in _reset mode_. The message contains the following data:
 
@@ -133,13 +133,13 @@ If the module detects an unrecoverable error before or during this message, the 
 
 The version numbers can be used by both ends of the communication to update a module's protocol while keeping it compatible with older versions, or by the MC to detect outdated or unsupported module revisions.
 
-### ID 0x02: Ping
+### ID 0x03: Ping
 
 This message is sent by the MC. It is only valid for modules in _configuration mode_ and _game mode_. The message contains no data.
 
-Upon receiving the message, a module MUST respond with a Pong (0x02) message with no data.
+Upon receiving the message, a module MUST respond with a Pong (0x03) message with no data.
 
-However, a module that is in _reset mode_ MUST NOT respond to a Ping (0x02) message.
+However, a module that is in _reset mode_ MUST NOT respond to a Ping (0x03) message.
 
 ### ID 0x10: Launch game
 

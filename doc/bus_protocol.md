@@ -2,7 +2,7 @@
 
 This document specifies the protocol used for communication over the CAN bus between modules and the main controller.
 
-This specification is version `1.0-alpha3`.
+This specification is version `1.0-alpha4`.
 
 ## Definitions
 
@@ -103,18 +103,24 @@ Upon receiving it, a module MUST perform a soft reset:
 - Reset all state variables to their initial state
 - Restore user interface elements to their initial state
 
-After performing the reset, the module MUST respond with a Announce (0x01) message with the following data:
+After performing the reset, the module MUST wait between 200ms and 300ms to allow all modules to reset. The wait duration SHOULD be random in order to avoid bus collisions; a hardcoded value that varies for each module suffices.
+
+After this the module MUST send an Announce (0x01) message.
+
+### ID 0x01: Announce
+
+This message is sent by a module. It is only valid for modules in _reset mode_. The message contains the following data:
 
 | Bits | Length | Field | Description |
 |------|--------|-------|-------------|
-| 0-7 | 8 | major hardware version | The major version number of the module hardware. |
-| 8-15 | 8 | minor hardware version | The minor version number of the module hardware. |
-| 16-23 | 8 | major software version | The major version number of the module software. |
-| 24-31 | 8 | minor software version | The minor version number of the module software. |
+| 0-7 | 8 | major HW version | The major version number of the module hardware. |
+| 8-15 | 8 | minor HW version | The minor version number of the module hardware. |
+| 16-23 | 8 | major SW version | The major version number of the module software. |
+| 24-31 | 8 | minor SW version | The minor version number of the module software. |
 
-Before sending a response the module MUST wait between 500ms and 750ms to allow all modules to reset. The wait duration SHOULD be random in order to avoid bus collisions; a hardcoded value that varies for each module suffices.
+This message MUST be sent exactly once after receiving a Reset (0x00) message; see above.
 
-After sending the response, the module SHOULD perfoming minimal actions while waiting for the Initialize (0x02) message.
+After sending the message, the module SHOULD perform minimal actions while waiting for an Initialize (0x02) message.
 
 ### ID 0x02: Initialize
 
@@ -122,10 +128,10 @@ This message is sent by the MC. It is only valid for modules in _reset mode_. Th
 
 | Bits | Length | Field | Description |
 |------|--------|-------|-------------|
-| 0-7 | 8 | major hardware version | The major version number of the hardware of the MC and constant bomb hardware. |
-| 8-15 | 8 | minor hardware version | The minor version number of the hardware of the MC and constant bomb hardware. |
-| 16-23 | 8 | major software version | The major version number of the software of the MC and constant bomb hardware. |
-| 24-31 | 8 | minor software version | The minor version number of the software of the MC and constant bomb hardware. |
+| 0-7 | 8 | major HW version | The major version number of the hardware of the MC and constant bomb hardware. |
+| 8-15 | 8 | minor HW version | The minor version number of the hardware of the MC and constant bomb hardware. |
+| 16-23 | 8 | major SW version | The major version number of the software of the MC and constant bomb hardware. |
+| 24-31 | 8 | minor SW version | The minor version number of the software of the MC and constant bomb hardware. |
 
 Upon receiving the message, a module MUST set the MODULE_READY signal high and enter _configuration mode_.
 

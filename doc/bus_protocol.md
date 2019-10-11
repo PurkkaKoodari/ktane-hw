@@ -2,7 +2,7 @@
 
 This document specifies the protocol used for communication over the CAN bus between modules and the main controller.
 
-This specification is version `1.0-alpha4`.
+This specification is version `1.0-alpha5`.
 
 ## Definitions
 
@@ -15,9 +15,9 @@ In this document, the following terms and abbreviations are used:
 
 Both the MC and modules can initiate messages.
 
-The MC can send _request_ messages to modules. Some _requests_ require _responses_ from the modules. With the exception of Reset (0x00), responses SHOULD use the same message ID as the request.
+The MC can send _request_ messages to modules. Some _requests_ require _responses_ from the modules. Responses SHOULD use the same message ID as the request.
 
-Only the MC can send _broadcast_ messages to all modules. With the exception of Reset (0x00), broadcast messages do not require responses.
+Only the MC can send _broadcast_ messages to all modules. Broadcast messages SHOULD NOT require responses.
 
 Modules can send _event_ messages to the MC. Event messages MUST NOT require responses from the MC. After sending an event message, a module MUST be ready to receive any unrelated message; state changes caused by event messages are to be handled asynchronously.
 

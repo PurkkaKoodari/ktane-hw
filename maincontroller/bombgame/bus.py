@@ -97,7 +97,7 @@ MESSAGE_ID_MASK = ((1 << MESSAGE_ID_BITS) - 1) << MESSAGE_ID_OFFSET
 MESSAGE_ID_REGISTRY = Registry("message_id")
 
 class BusMessage(ABC):
-    __slots__ = "id", "module", "direction"
+    __slots__ = ("id", "module", "direction")
 
     message_id = Ungettable
 
@@ -170,7 +170,7 @@ class SimpleBusMessage(BusMessage):
         return b""
 
 class VersionMessage(BusMessage):
-    __slots__ = "hw_version", "sw_version"
+    __slots__ = ("hw_version", "sw_version")
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
                  hw_version: Tuple[int], sw_version: Tuple[int]):
@@ -198,7 +198,7 @@ class ModuleStatusMessage(StatusMessage):
     pass
 
 class ErrorMessage(StatusMessage):
-    __slots__ = "code", "details"
+    __slots__ = ("code", "details")
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *, code: int, details: bytes):
         super().__init__(self.__class__.message_id, module, direction)
@@ -288,6 +288,7 @@ class BombBus(EventSource):
     """
 
     def __init__(self, bus: can.BusABC):
+        super().__init__()
         self._bus = bus
 
     def send(self, message: BusMessage):

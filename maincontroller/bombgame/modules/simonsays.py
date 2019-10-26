@@ -16,7 +16,7 @@ class SimonColor(IntEnum):
 class SimonSaysModule(Module):
     module_id = 5
 
-    __slots__ = "_sequence",
+    __slots__ = ("_sequence",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(args, kwargs)
@@ -30,7 +30,7 @@ class SimonSaysModule(Module):
 class SetSimonSequenceMessage(BusMessage):
     message_id = (SimonSaysModule, BusMessageId.MODULE_SPECIFIC_0)
 
-    __slots__ = "sequence",
+    __slots__ = ("sequence",)
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
                  sequence: Tuple[SimonColor]):
@@ -51,7 +51,7 @@ class SetSimonSequenceMessage(BusMessage):
 class SimonButtonPressMessage(BusMessage):
     message_id = (SimonSaysModule, BusMessageId.MODULE_SPECIFIC_1)
 
-    __slots__ = "color",
+    __slots__ = ("color",)
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
                  color: SimonColor):

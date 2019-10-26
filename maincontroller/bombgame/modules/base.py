@@ -15,7 +15,7 @@ class Module(ABC):
     The base class for modules.
     """
 
-    __slots__ = "_bomb", "bus_id"
+    __slots__ = ("_bomb", "bus_id")
 
     is_needy = False
     is_boss = False

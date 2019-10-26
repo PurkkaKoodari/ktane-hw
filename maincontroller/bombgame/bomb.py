@@ -38,6 +38,7 @@ class Bomb(EventSource):
     DEFAULT_MAX_STRIKES = 3
 
     def __init__(self, bus: BombBus, *, max_strikes=DEFAULT_MAX_STRIKES, casing=None):
+        super().__init__()
         self._bus = bus
         self.casing = casing or VanillaCasing()
         self.modules = []

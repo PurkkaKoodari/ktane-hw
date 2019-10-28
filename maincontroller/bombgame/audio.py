@@ -4,6 +4,8 @@ SOUND_REGISTRY = {}
 
 LOADED_SOUNDS = {}
 
+PLAYBACK_CHANNELS = {}
+
 def register_sounds(module_class, sounds):
     SOUND_REGISTRY[module_class] = sounds
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from abc import ABC, abstractclassmethod, abstractmethod
 from enum import IntEnum
 from typing import Tuple
@@ -5,7 +6,8 @@ import struct
 
 import can
 
-from .utils import EventSource, Registry, Ungettable
+from ..modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
+from ..utils import Registry, Ungettable
 
 MODULEID_TYPE_BITS = 12
 MODULEID_SERIAL_BITS = 10
@@ -39,13 +41,19 @@ class ModuleId:
     def __hash__(self):
         return self.__int__()
 
+    def __str__(self):
+        if self.type in MODULE_ID_REGISTRY:
+            return f"{MODULE_ID_REGISTRY[self.type].__name__}#{self.serial}"
+        return f"{self.type}#{self.serial}"
+
 ModuleId.BROADCAST = ModuleId(0, 0)
 
 class BusMessageId(IntEnum):
     RESET = 0x00
     ANNOUNCE = 0x01
     INITIALIZE = 0x02
-    PING = 0x03
+    INIT_COMPLETE = 0x03
+    PING = 0x04
     LAUNCH_GAME = 0x10
     START_TIMER = 0x11
     EXPLODE = 0x12
@@ -112,7 +120,7 @@ class BusMessage(ABC):
         self.direction = direction
 
     @classmethod
-    def parse(cls, message: can.Message) -> "BusMessage":
+    def parse(cls, message: can.Message) -> BusMessage:
         if not message.is_extended_id:
             raise ValueError("non-extended arbitration id")
 
@@ -125,7 +133,6 @@ class BusMessage(ABC):
         module_id = ModuleId(module_type, module_serial)
 
         if message_id >= BusMessageId.MODULE_SPECIFIC_0:
-            from .modules import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
             if module_id.type not in MODULE_ID_REGISTRY:
                 raise ValueError(f"unknown module type {hex(module_id.type)}")
             module_type = MODULE_ID_REGISTRY[module_id.type]
@@ -182,11 +189,11 @@ class VersionMessage(BusMessage):
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
         if len(data) != 4:
             raise ValueError(f"{cls.__name__} must have 4 bytes of data")
-        hw_major, hw_minor, sw_major, sw_minor = struct.unpack(">BBBB", data)
+        hw_major, hw_minor, sw_major, sw_minor = struct.unpack("<BBBB", data)
         return cls(module, direction, hw_version=(hw_major, hw_minor), sw_version=(sw_major, sw_minor))
 
     def _serialize_data(self):
-        return struct.pack(">BBBB", *self.hw_version, *self.sw_version)
+        return struct.pack("<BBBB", *self.hw_version, *self.sw_version)
 
 class StatusMessage(SimpleBusMessage):
     pass
@@ -211,11 +218,11 @@ class ErrorMessage(StatusMessage):
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
         if not 1 <= len(data) <= 8:
             raise ValueError(f"{cls.__name__} must have 1 to 8 bytes of data")
-        code, = struct.unpack_from(">B", data, 0)
+        code, = struct.unpack_from("<B", data, 0)
         return cls(module, direction, code=code, details=data[1:])
 
     def _serialize_data(self):
-        return struct.pack(">B", self.code) + self.details
+        return struct.pack("<B", self.code) + self.details
 
 @MESSAGE_ID_REGISTRY.register
 class ResetMessage(SimpleBusMessage):
@@ -228,6 +235,10 @@ class AnnounceMessage(VersionMessage):
 @MESSAGE_ID_REGISTRY.register
 class InitializeMessage(VersionMessage):
     message_id = BusMessageId.INITIALIZE
+
+@MESSAGE_ID_REGISTRY.register
+class InitCompleteMessage(VersionMessage):
+    message_id = BusMessageId.INIT_COMPLETE
 
 @MESSAGE_ID_REGISTRY.register
 class PingMessage(SimpleBusMessage):
@@ -280,35 +291,3 @@ class MinorUnrecoverableErrorMessage(ErrorMessage):
 @MESSAGE_ID_REGISTRY.register
 class MajorUnrecoverableErrorMessage(ErrorMessage):
     message_id = BusMessageId.MAJOR_UNRECOVERABLE_ERROR
-
-class BusError(Exception):
-    """An exception related to the bus."""
-
-class BombBus(EventSource):
-    """The CAN-based bus used for controlling the physical bomb.
-
-    Listen for suitable BusMessage events to get incoming messages.
-    """
-
-    def __init__(self, bus: can.BusABC):
-        super().__init__()
-        self._bus = bus
-
-    def send(self, message: BusMessage):
-        """Send a message to the bus.
-
-        :raises IOError:
-            if the message could not be sent
-        """
-        try:
-            self._bus.send(message.serialize())
-        except can.CanError:
-            raise IOError("failed to send message")
-
-    def receive(self, message: can.Message):
-        """Called by the CAN receiver thread when a message arrives."""
-        try:
-            message = BusMessage.parse(message)
-        except ValueError as ex:
-            raise BusError(f"invalid message: {ex}") from None
-        self.trigger(message)

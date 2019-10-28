@@ -3,8 +3,9 @@ from random import randint, choice
 from typing import Tuple
 import struct
 
-from .base import Module, MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
-from ..bus import BusMessage, BusMessageId, ModuleId, BusMessageDirection
+from .base import Module
+from .registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
+from ..bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
 
 class SimonColor(IntEnum):
     BLUE = 0
@@ -18,8 +19,8 @@ class SimonSaysModule(Module):
 
     __slots__ = ("_sequence",)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(args, kwargs)
+    def __init__(self, bomb, bus_id):
+        super().__init__(bomb, bus_id)
         self._sequence = None
 
     def generate(self):
@@ -45,7 +46,7 @@ class SetSimonSequenceMessage(BusMessage):
         return cls(module, direction, sequence=sequence)
 
     def _serialize_data(self):
-        return b"".join(struct.pack(">B", color) for color in self.sequence)
+        return b"".join(struct.pack("<B", color) for color in self.sequence)
 
 @MODULE_MESSAGE_ID_REGISTRY.register
 class SimonButtonPressMessage(BusMessage):
@@ -65,4 +66,4 @@ class SimonButtonPressMessage(BusMessage):
         return cls(module, direction, color=SimonColor(data[0]))
 
     def _serialize_data(self):
-        return struct.pack(">B", self.color)
+        return struct.pack("<B", self.color)

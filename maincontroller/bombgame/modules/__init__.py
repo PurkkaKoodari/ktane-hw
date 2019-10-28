@@ -1,4 +1,6 @@
-from .base import Module, NeedyModule, MODULE_NAMES, MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
+MODULE_NAMES = [
+    "SimonSays"
+]
 
 def load_modules():
     for module_name in MODULE_NAMES:

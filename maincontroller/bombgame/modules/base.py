@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from ..bus import StrikeModuleMessage, ModuleId
 from ..utils import Registry
 
-MODULES = [
+MODULE_NAMES = [
     "SimonSays"
 ]
 

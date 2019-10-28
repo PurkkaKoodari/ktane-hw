@@ -1,4 +1,8 @@
+from abc import ABC, abstractmethod
+from collections import deque
+from logging import getLogger
 from typing import Any, Union, Callable
+from threading import Thread, Lock, Condition
 
 class EventSource:
     """A mixin class that provides event listener functionality."""
@@ -59,3 +63,39 @@ class UngettableMeta(type):
 
 class Ungettable(metaclass=UngettableMeta):
     pass
+
+class AuxiliaryThread(Thread, ABC):
+    def __init__(self, *args, name, **kwargs):
+        super().__init__(*args, name=name, **kwargs)
+        self.logger = getLogger(self.name)
+        self._lock = Lock()
+        self._cond = Condition(self._lock)
+        self._queue = deque()
+        self._quit = False
+
+    def run(self):
+        try:
+            self._run()
+        except SystemExit:
+            pass
+        except BaseException as ex:
+            self.logger.error("Uncaught %s in %s: %s", ex.__class__.__name__, self.name, ex, exc_info=True)
+
+    def _get_task(self, timeout=None):
+        with self._lock:
+            self._cond.wait_for(lambda: self._queue or self._quit, timeout)
+            return None if self._quit else self._queue.popleft()
+
+    def enqueue(self, task):
+        with self._lock:
+            self._queue.append(task)
+            self._cond.notify_all()
+
+    def stop(self):
+        with self._lock:
+            self._quit = True
+            self._cond.notify_all()
+
+    @abstractmethod
+    def _run(self):
+        pass

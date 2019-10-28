@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from .bus import BombBus, DefuseBombMessage, ExplodeBombMessage, ModuleId
+from .bus import BombBus, ResetMessage, DefuseBombMessage, ExplodeBombMessage, ModuleId
 from .modules import Module
 from .utils import EventSource
 
@@ -45,6 +45,9 @@ class Bomb(EventSource):
         self.max_strikes = max_strikes
         self.strikes = 0
 
+    def initialize(self):
+        self._bus.send(ResetMessage(ModuleId.BROADCAST))
+
     def add_module(self, module: Module):
         self.modules.append(module)
 
@@ -55,6 +58,7 @@ class Bomb(EventSource):
         self._bus.send(DefuseBombMessage(ModuleId.BROADCAST))
 
     def strike(self) -> bool:
+        """Increments the strike count. Returns True if the bomb exploded."""
         self.strikes += 1
         if self.strikes >= self.max_strikes:
             self.explode()

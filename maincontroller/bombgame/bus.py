@@ -114,7 +114,7 @@ class BusMessage(ABC):
     @classmethod
     def parse(cls, message: can.Message) -> "BusMessage":
         if not message.is_extended_id:
-            raise ValueError("invalid message: non-extended arbitration id")
+            raise ValueError("non-extended arbitration id")
 
         direction = (message.arbitration_id & MESSAGE_DIRECTION_MASK) >> MESSAGE_DIRECTION_OFFSET
         module_type = (message.arbitration_id & MESSAGE_MODULE_TYPE_MASK) >> MESSAGE_MODULE_TYPE_OFFSET
@@ -127,15 +127,15 @@ class BusMessage(ABC):
         if message_id >= BusMessageId.MODULE_SPECIFIC_0:
             from .modules import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
             if module_id.type not in MODULE_ID_REGISTRY:
-                raise ValueError(f"invalid message: unknown module type {hex(module_id.type)}")
+                raise ValueError(f"unknown module type {hex(module_id.type)}")
             module_type = MODULE_ID_REGISTRY[module_id.type]
             lookup = (module_type, message_id)
             if lookup not in MODULE_MESSAGE_ID_REGISTRY:
-                raise ValueError(f"invalid message: unknown message id {hex(message_id)} for {module_type.__name__}")
+                raise ValueError(f"unknown message id {hex(message_id)} for {module_type.__name__}")
             message_class = MODULE_MESSAGE_ID_REGISTRY[lookup]
         else:
             if message_id not in MESSAGE_ID_REGISTRY:
-                raise ValueError(f"invalid message: unknown message id {hex(message_id)}")
+                raise ValueError(f"unknown message id {hex(message_id)}")
             message_class = MESSAGE_ID_REGISTRY[message_id]
 
         return message_class._parse_data(module_id, direction, message.data)
@@ -281,6 +281,9 @@ class MinorUnrecoverableErrorMessage(ErrorMessage):
 class MajorUnrecoverableErrorMessage(ErrorMessage):
     message_id = BusMessageId.MAJOR_UNRECOVERABLE_ERROR
 
+class BusError(Exception):
+    """An exception related to the bus."""
+
 class BombBus(EventSource):
     """The CAN-based bus used for controlling the physical bomb.
 
@@ -304,5 +307,8 @@ class BombBus(EventSource):
 
     def receive(self, message: can.Message):
         """Called by the CAN receiver thread when a message arrives."""
-        message = BusMessage.parse(message)
+        try:
+            message = BusMessage.parse(message)
+        except ValueError as ex:
+            raise BusError(f"invalid message: {ex}") from None
         self.trigger(message)

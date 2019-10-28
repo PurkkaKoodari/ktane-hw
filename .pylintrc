@@ -5,4 +5,4 @@ max-line-length=120
 disable=too-few-public-methods,missing-docstring,line-too-long
 
 [BASIC]
-good-names=id
+good-names=id,ex

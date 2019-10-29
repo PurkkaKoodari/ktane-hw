@@ -2,7 +2,7 @@
 
 This document specifies the protocol used for communication over the CAN bus between modules and the main controller.
 
-This specification is version `1.0-alpha6`.
+This specification is version `1.0-alpha7`.
 
 ## Definitions
 
@@ -13,6 +13,15 @@ In this document, the following terms and abbreviations are used:
 - **message** = a single CAN message, the format of which is specified below
 - **reset sequence** = the sequence of actions that brings the module to a known state where a game can be immediately started
 - **mode** = a state of the module, known by the module and assumed by the MC based on seen messages
+
+## Physical layer
+
+The module interface MUST contain at least the following signals:
+
+- Ground (GND)
+- CAN bus (CAN_L and CAN_H)
+- MODULE_SENSE (pulled to ground by the module when connected)
+- MODULE_ENABLE (digital signal from the MC to the module)
 
 ## Message types
 
@@ -26,13 +35,11 @@ Modules can send _event_ messages to the MC. Event messages MUST NOT require res
 
 ## Module states
 
-When a module is powered up, it is in _power-on mode_. Modules in this mode MUST completely ignore all messages except for the Reset (0x00) message, MUST set the MODULE_READY signal low and MUST NOT send any messages.
+When a module is powered up, or when a module in any mode receives a Reset (0x00) message, it enters _reset mode_. Modules in this mode MUST completely ignore all messages except for the Reset (0x00) message and MUST NOT send any messages.
 
-When a module in any mode receives a Reset (0x00) message, it enters _reset mode_. Modules in this mode MUST keep the MODULE_READY signal low and MUST NOT send any messages except for a single Announce (0x01) message.
+When the MODULE_ENABLE signal goes high, a module in _reset mode_ enters _initialization mode_ and sends an Announce (0x01) message. If the module's reset sequence is complete, it may immediately enter _configuration mode_; otherwise it completes its reset sequence and then sends an Init complete (0x02) message to enter _configuration mode_.
 
-When a module in _reset mode_ receives an Initialize (0x02) message, it enters _initialization mode_. A module in this mode completes its reset sequence and then sends an Init complete (0x03) message; this may happen immediately if the reset sequence is already complete.
-
-When sending the Init complete (0x03) message, the module enters _configuration mode_. This mode is used to send game settings to modules using module-specific messages (message IDs 0x30-0x3f).
+_Configuration mode_ is used to send game settings to modules using module-specific messages (message IDs 0x30-0x3f).
 
 When a module in _configuration mode_ receives an Launch game (0x10) message, it enters _game mode_. In this mode, messages 0x11-0x17 are used to control the in-game state of the module. _Game mode_ is only exited by a Reset (0x00) message.
 
@@ -40,11 +47,11 @@ When a module in _configuration mode_ receives an Launch game (0x10) message, it
 
 If a module detects an error state, it SHOULD attempt to send a suitable error message (message IDs 0x20-0x23).
 
-If an unrecoverable error occurs in relation to a message from the MC that requires a response, a module MAY respond with only an error message.
+If an unrecoverable error occurs in relation to a message from the MC that requires a response, a module MAY omit the successful response message and respond with only an error message.
 
 If a module in _reset mode_ detects an error state, it MUST delay reporting it until it enters _initialization mode_.
 
-Both the MC and modules MUST ignore any messages that are invalid for the module's state, and SHOULD report them as recoverable errors, if possible. The MC MUST completely ignore messages from modules in _power-on mode_ or _reset mode_ because they may have been sent before the module was reset.
+Both the MC and modules MUST ignore any messages that are invalid for the module's state, and SHOULD report them as recoverable errors, if possible. However, the MC MUST completely ignore messages from modules in _reset mode_ because they may have been sent before the module was reset.
 
 ## Message format
 
@@ -78,10 +85,9 @@ The following message IDs are defined:
 | Number | Name | Type | Data length | Valid in modes |
 |--------|------|------|-------------|----------------|
 | 0x00 | Reset | broadcast | 0 | all |
-| 0x01 | Announce | event | 4 | reset |
-| 0x02 | Initialize | request | 4 | reset |
-| 0x03 | Init complete | event | 0 | initialization |
-| 0x04 | Ping | request, response | 0 | all except reset |
+| 0x01 | Announce | event | 5 | reset |
+| 0x02 | Init complete | event | 0 | initialization |
+| 0x03 | Ping | request, response | 0 | all except reset |
 | 0x10 | Launch game | broadcast | 0 | configuration |
 | 0x11 | Start timer | broadcast | 0 | game |
 | 0x12 | Explode | broadcast | 0 | game |
@@ -105,15 +111,11 @@ This message is sent by the MC as a broadcast message. The message contains no d
 Upon receiving it, a module MUST perform a soft reset:
 
 - Stop all processing of previous messages and user actions
-- Set the MODULE_READY signal low
 - Reset all state variables to their initial state
 - Restore user interface elements to their initial state
+- Enter _reset mode_
 
-After performing the reset, the module MUST wait between 200ms and 300ms to allow all modules to reset and the bus to settle. The wait duration SHOULD be random in order to avoid bus collisions; a hardcoded value that varies for each module suffices.
-
-After this the module MUST send an Announce (0x01) message.
-
-This message MUST be handled reasonably quickly; the Announce (0x01) message SHOULD be sent within 500ms from receiving this message. Actions that take time to finish such as resetting moving parts or sending large amounts of data to peripherals MUST NOT delay the Announce (0x01) message; the Init complete (0x03) message is used to indicate the completion of the reset sequence.
+This process MUST be reasonably fast; the module SHOULD be in _reset mode_ monitoring the MODULE_ENABLE line within 100ms and MUST be within 500ms of receiving this message. Actions that take time to finish (such as resetting moving parts or performing large transfers) MUST NOT delay responding to the MODULE_ENABLE signal; the Init complete (0x02) message is used to indicate the completion of a long-running reset sequence.
 
 ### ID 0x01: Announce
 
@@ -125,39 +127,28 @@ This message is sent by a module. It is only valid for modules in _reset mode_. 
 | 8-15 | 8 | minor HW version | The minor version number of the module hardware. |
 | 16-23 | 8 | major SW version | The major version number of the module software. |
 | 24-31 | 8 | minor SW version | The minor version number of the module software. |
+| 32-38 | 7 | reserved | Reserved, must be zero. |
+| 39 | 1 | init complete | 1 if the reset sequence is complete and the module will enter _configuration mode_, 0 otherwise. |
 
-This message MUST be sent exactly once after receiving a Reset (0x00) message; see above.
+When the MODULE_ENABLE line goes high while a module is in _reset mode_, or is high when entering the mode, the module MUST send this message and enter _initialization mode_.
 
-### ID 0x02: Initialize
+If the module's reset sequence is complete, it SHOULD set the `init complete` bit in this message and enter _configuration mode_ upon sending it. If a module sends this message with the `init complete` bit unset, it MUST send an Init complete (0x02) message upon completing the reset sequence.
 
-This message is sent by the MC. It is only valid for modules in _reset mode_. The message contains the following data:
+Any errors detected in _reset mode_ MUST only be reported after sending this message.
 
-| Bits | Length | Field | Description |
-|------|--------|-------|-------------|
-| 0-7 | 8 | major HW version | The major version number of the hardware of the MC and constant bomb hardware. |
-| 8-15 | 8 | minor HW version | The minor version number of the hardware of the MC and constant bomb hardware. |
-| 16-23 | 8 | major SW version | The major version number of the software of the MC and constant bomb hardware. |
-| 24-31 | 8 | minor SW version | The minor version number of the software of the MC and constant bomb hardware. |
+The version numbers can be used to update a module's protocol while keeping it compatible with older versions, or to detect outdated or unsupported module revisions.
 
-Upon receiving the message, a module MUST set the MODULE_READY signal high and enter _initialization mode_. If the module's reset sequence is done, it can immediately send an Init complete (0x03) message and enter _configuration mode_.
-
-Any errors detected before this point MUST only be reported after receiving this message.
-
-If the module detects an unrecoverable error before or during this message, the module MAY keep the MODULE_READY signal low in addition to sending an error message.
-
-The version numbers can be used by both ends of the communication to update a module's protocol while keeping it compatible with older versions, or by the MC to detect outdated or unsupported module revisions.
-
-### ID 0x03: Init complete
+### ID 0x02: Init complete
 
 This message is sent by a module. It is only valid for modules in _initialization mode_. The message contains no data.
 
 This message indicates that the module has completed its reset sequence and that configuration messages may follow. Upon sending this message the module MUST enter _configuration mode_.
 
-### ID 0x04: Ping
+### ID 0x03: Ping
 
 This message is sent by the MC. It is only valid for modules in _initialization mode_, _configuration mode_ and _game mode_. The message contains no data.
 
-Upon receiving the message, a module MUST respond with a Ping (0x04) message with no data.
+Upon receiving the message, a module MUST respond with a Ping (0x03) message with no data.
 
 ### ID 0x10: Launch game
 

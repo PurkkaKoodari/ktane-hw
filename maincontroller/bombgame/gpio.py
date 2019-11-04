@@ -1,5 +1,6 @@
 from __future__ import annotations
 from collections import namedtuple
+from logging import getLogger
 from threading import Lock
 
 from smbus import SMBus
@@ -232,8 +233,9 @@ class MCP23017:
         def __exit__(self, _1, _2, _3):
             self._mcp.end_configuration()
 
-GPIO_POLL_INTERVAL = 0.5
-SMBUS_ADDR = 1 # TODO: check for Raspi 3
+GPIO_POLL_INTERVAL = 1.0
+SMBUS_ADDR = 1 # TODO: check actual address for Raspi 3
+INTERRUPT_PIN = 22 # TODO: check actual pin number
 
 class ModuleSenseChange:
     """The event that is raised when a module is added or removed."""
@@ -268,6 +270,7 @@ class Gpio(EventSource):
         self._lock = Lock()
         self._poller = GpioPollerThread(self)
         self._initialize_mcps(casing)
+        self._initialize_interrupt()
         assert len(self._modules) == casing.capacity
         assert len(self._widgets) == casing.widget_capacity
 
@@ -276,12 +279,10 @@ class Gpio(EventSource):
             assert len(spec.sense_pins) == len(spec.enable_pins)
             mcp = MCP23017(SMBUS_ADDR, spec.mcp23017_addr)
             with mcp.begin_configuration():
-                # TODO add interrupts
-                # mcp.configure_int_pins(mirror=True)
+                mcp.configure_int_pins(mirror=True)
                 for sense, enable in zip(spec.sense_pins, spec.enable_pins):
                     mcp.pin_mode(None, sense, MCP23017.INPUT_PULLUP, invert=True)
-                    # TODO add interrupts
-                    # mcp.pin_interrupt(None, sense, MCP23017.BOTH)
+                    mcp.pin_interrupt(None, sense, MCP23017.BOTH)
                     mcp.pin_mode(None, enable, MCP23017.OUTPUT)
                     mcp.write_pin(None, enable, False)
                     self._modules.append((mcp, sense, enable))
@@ -290,6 +291,17 @@ class Gpio(EventSource):
                     mcp.write_pin(None, widget, False)
                     self._widgets.append((mcp, widget))
             self._mcps.append(mcp)
+
+    def _initialize_interrupt(self):
+        # pylint: disable=no-member
+        try:
+            import RPi.GPIO as GPIO
+        except RuntimeError:
+            getLogger("GPIO").warning("Failed to initialize RPi.GPIO module. Module changes will be polled.")
+            return
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(INTERRUPT_PIN, GPIO.IN)
+        GPIO.add_event_detect(INTERRUPT_PIN, GPIO.FALLING, self.check_sense_changes)
 
     def start(self):
         self._poller.start()

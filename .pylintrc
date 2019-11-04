@@ -8,4 +8,4 @@ max-line-length=120
 disable=too-few-public-methods,missing-docstring,line-too-long,fixme
 
 [BASIC]
-good-names=id,ex
+good-names=id,ex,n,i,j,k

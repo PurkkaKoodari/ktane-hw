@@ -3,6 +3,7 @@ import struct
 from .base import Module
 from .registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
 from ..bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
+from ..events import TimerTick
 
 @MODULE_ID_REGISTRY.register
 class TimerModule(Module):
@@ -10,20 +11,22 @@ class TimerModule(Module):
 
     def __init__(self, bomb, bus_id, location, hw_version, sw_version):
         super().__init__(bomb, bus_id, location, hw_version, sw_version)
-        bomb.add_listener(self._update_timer)
+        bomb.add_listener(TimerTick, self._update_timer)
 
     def generate(self):
         pass
 
+    def prepare(self):
+        self._update_timer(None)
+
     def _update_timer(self, _):
-        message = SetTimerStateMessage(
+        self._bomb.bus.send(SetTimerStateMessage(
             self.bus_id,
             time_left=self._bomb.time_left,
             speed=self._bomb.timer_speed,
             strikes=self._bomb.strikes,
             max_strikes=self._bomb.max_strikes
-        )
-        self._bomb.bus.send(message)
+        ))
 
 @MODULE_MESSAGE_ID_REGISTRY.register
 class SetTimerStateMessage(BusMessage):

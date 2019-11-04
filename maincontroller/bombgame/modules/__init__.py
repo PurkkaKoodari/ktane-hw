@@ -1,5 +1,8 @@
 MODULE_NAMES = [
-    "SimonSays"
+    "Timer",
+    "SimonSays",
+    "Keypad",
+    "Wires"
 ]
 
 def load_modules():

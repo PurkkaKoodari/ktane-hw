@@ -1,6 +1,7 @@
+from __future__ import annotations
 from enum import IntEnum
 from random import randint, choice
-from typing import Tuple
+from typing import Sequence
 import struct
 
 from .base import Module
@@ -17,15 +18,35 @@ class SimonColor(IntEnum):
 class SimonSaysModule(Module):
     module_id = 5
 
-    __slots__ = ("_sequence",)
+    __slots__ = ("_sequence", "_length", "_pressed")
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, bomb, bus_id, location, hw_version, sw_version):
+        super().__init__(bomb, bus_id, location, hw_version, sw_version)
         self._sequence = None
+        self._length = 1
+        self._pressed = []
+        bomb.bus.add_listener(SimonButtonPressMessage, self._handle_event)
 
     def generate(self):
         length = randint(3, 5)
         self._sequence = [choice(SimonColor.__members__) for _ in range(length)]
+
+    def prepare(self):
+        self._send_sequence()
+
+    def _send_sequence(self):
+        self._bomb.bus.send(SetSimonSequenceMessage(self.bus_id, sequence=self._sequence[:self._length]))
+
+    def _handle_event(self, event: SimonButtonPressMessage):
+        self._pressed.append(event.color)
+        if self._pressed != self._sequence[:len(self._pressed)]:
+            self.strike()
+            self._pressed = []
+        elif self._length == len(self._sequence):
+            self.solve()
+        else:
+            self._length += 1
+            self._send_sequence()
 
 @MODULE_MESSAGE_ID_REGISTRY.register
 class SetSimonSequenceMessage(BusMessage):
@@ -34,14 +55,14 @@ class SetSimonSequenceMessage(BusMessage):
     __slots__ = ("sequence",)
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 sequence: Tuple[SimonColor]):
+                 sequence: Sequence[SimonColor]):
         super().__init__(self.__class__.message_id[1], module, direction)
         self.sequence = sequence
 
     @classmethod
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
-        if not 3 <= len(data) <= 5:
-            raise ValueError(f"{cls.__name__} must have 3 to 5 bytes of data")
+        if not 1 <= len(data) <= 5:
+            raise ValueError(f"{cls.__name__} must have 1 to 5 bytes of data")
         sequence = tuple(SimonColor(byte) for byte in data)
         return cls(module, direction, sequence=sequence)
 
@@ -63,7 +84,8 @@ class SimonButtonPressMessage(BusMessage):
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
         if len(data) != 1:
             raise ValueError(f"{cls.__name__} must have 1 byte of data")
-        return cls(module, direction, color=SimonColor(data[0]))
+        color, = struct.unpack("<B", data)
+        return cls(module, direction, color=SimonColor(color))
 
     def _serialize_data(self):
         return struct.pack("<B", self.color)

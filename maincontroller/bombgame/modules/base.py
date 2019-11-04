@@ -4,7 +4,7 @@ from enum import Enum
 from threading import RLock
 from typing import Tuple
 
-from ..bus.messages import StrikeModuleMessage, ModuleId
+from ..bus.messages import StrikeModuleMessage, SolveModuleMessage, ModuleId
 
 class ModuleState(Enum):
     INITIALIZATION = 1
@@ -43,11 +43,18 @@ class Module(ABC):
     def generate(self):
         pass
 
+    @abstractmethod
+    def prepare(self):
+        pass
+
+    def solve(self):
+        self._bomb.send(SolveModuleMessage(self.bus_id))
+
     def strike(self, count=True):
         if count:
             if self._bomb.strike():
                 return
-            self._bomb.send(StrikeModuleMessage(self.bus_id))
+            self._bomb.bus.send(StrikeModuleMessage(self.bus_id))
 
 class NeedyModule(Module): # pylint: disable=abstract-method
     is_needy = True

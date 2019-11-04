@@ -19,8 +19,8 @@ class SimonSaysModule(Module):
 
     __slots__ = ("_sequence",)
 
-    def __init__(self, bomb, bus_id):
-        super().__init__(bomb, bus_id)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._sequence = None
 
     def generate(self):

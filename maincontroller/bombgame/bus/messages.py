@@ -51,9 +51,8 @@ ModuleId.BROADCAST = ModuleId(0, 0)
 class BusMessageId(IntEnum):
     RESET = 0x00
     ANNOUNCE = 0x01
-    INITIALIZE = 0x02
-    INIT_COMPLETE = 0x03
-    PING = 0x04
+    INIT_COMPLETE = 0x02
+    PING = 0x03
     LAUNCH_GAME = 0x10
     START_TIMER = 0x11
     EXPLODE = 0x12
@@ -176,25 +175,6 @@ class SimpleBusMessage(BusMessage):
     def _serialize_data(self):
         return b""
 
-class VersionMessage(BusMessage):
-    __slots__ = ("hw_version", "sw_version")
-
-    def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 hw_version: Tuple[int], sw_version: Tuple[int]):
-        super().__init__(self.__class__.message_id, module, direction)
-        self.hw_version = hw_version
-        self.sw_version = sw_version
-
-    @classmethod
-    def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
-        if len(data) != 4:
-            raise ValueError(f"{cls.__name__} must have 4 bytes of data")
-        hw_major, hw_minor, sw_major, sw_minor = struct.unpack("<BBBB", data)
-        return cls(module, direction, hw_version=(hw_major, hw_minor), sw_version=(sw_major, sw_minor))
-
-    def _serialize_data(self):
-        return struct.pack("<BBBB", *self.hw_version, *self.sw_version)
-
 class StatusMessage(SimpleBusMessage):
     pass
 
@@ -229,15 +209,34 @@ class ResetMessage(SimpleBusMessage):
     message_id = BusMessageId.RESET
 
 @MESSAGE_ID_REGISTRY.register
-class AnnounceMessage(VersionMessage):
+class AnnounceMessage(BusMessage):
     message_id = BusMessageId.ANNOUNCE
 
-@MESSAGE_ID_REGISTRY.register
-class InitializeMessage(VersionMessage):
-    message_id = BusMessageId.INITIALIZE
+    FLAG_INIT_COMPLETE = 0x01
+
+    __slots__ = ("hw_version", "sw_version", "init_complete")
+
+    def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
+                 hw_version: Tuple[int], sw_version: Tuple[int], init_complete: bool):
+        super().__init__(self.__class__.message_id, module, direction)
+        self.hw_version = hw_version
+        self.sw_version = sw_version
+        self.init_complete = init_complete
+
+    @classmethod
+    def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
+        if len(data) != 5:
+            raise ValueError(f"{cls.__name__} must have 5 bytes of data")
+        hw_major, hw_minor, sw_major, sw_minor, flags = struct.unpack("<BBBBB", data)
+        init_complete = bool(flags & AnnounceMessage.FLAG_INIT_COMPLETE)
+        return cls(module, direction, hw_version=(hw_major, hw_minor), sw_version=(sw_major, sw_minor), init_complete=init_complete)
+
+    def _serialize_data(self):
+        flags = AnnounceMessage.FLAG_INIT_COMPLETE * self.init_complete
+        return struct.pack("<BBBBB", *self.hw_version, *self.sw_version, flags)
 
 @MESSAGE_ID_REGISTRY.register
-class InitCompleteMessage(VersionMessage):
+class InitCompleteMessage(SimpleBusMessage):
     message_id = BusMessageId.INIT_COMPLETE
 
 @MESSAGE_ID_REGISTRY.register

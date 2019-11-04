@@ -64,7 +64,7 @@ class BombBus(EventSource):
         else:
             self.trigger(message)
 
-    def _handle_bus_error(self, _1, _2):
+    def _handle_bus_error(self, _):
         if time.monotonic() > self._last_can_error + CAN_ERROR_MAX_INTERVAL:
             self._last_can_error = time.monotonic()
             self._can_error_count = 1

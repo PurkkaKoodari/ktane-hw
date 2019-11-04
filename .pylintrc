@@ -1,3 +1,6 @@
+[GENERAL]
+extension-pkg-whitelist=smbus
+
 [FORMAT]
 max-line-length=120
 

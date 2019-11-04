@@ -23,7 +23,7 @@ class EventSource:
     def trigger(self, event: Any) -> None:
         for (eventclass, callback) in self.__listeners:
             if isinstance(event, eventclass):
-                callback(self, event)
+                callback(event)
 
 class Registry(dict):
     """A registry for registering classes.

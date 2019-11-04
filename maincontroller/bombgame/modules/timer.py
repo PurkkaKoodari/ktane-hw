@@ -8,12 +8,22 @@ from ..bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirecti
 class TimerModule(Module):
     module_id = 1
 
-    def __init__(self, bomb, bus_id):
-        super().__init__(bomb, bus_id)
-        # TODO listen to timer ticks
+    def __init__(self, bomb, bus_id, location, hw_version, sw_version):
+        super().__init__(bomb, bus_id, location, hw_version, sw_version)
+        bomb.add_listener(self._update_timer)
 
     def generate(self):
         pass
+
+    def _update_timer(self, _):
+        message = SetTimerStateMessage(
+            self.bus_id,
+            time_left=self._bomb.time_left,
+            speed=self._bomb.timer_speed,
+            strikes=self._bomb.strikes,
+            max_strikes=self._bomb.max_strikes
+        )
+        self._bomb.bus.send(message)
 
 @MODULE_MESSAGE_ID_REGISTRY.register
 class SetTimerStateMessage(BusMessage):

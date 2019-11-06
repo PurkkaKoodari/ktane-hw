@@ -34,7 +34,7 @@
   )
 
   (setup
-    (last_trace_width 0.35)
+    (last_trace_width 0.25)
     (user_trace_width 0.35)
     (user_trace_width 0.5)
     (user_trace_width 1)
@@ -91,9 +91,9 @@
       (subtractmaskfromsilk false)
       (outputformat 1)
       (mirror false)
-      (drillshape 1)
+      (drillshape 0)
       (scaleselection 1)
-      (outputdirectory ""))
+      (outputdirectory "/home/sampsa/Opinnot/Elektroniikkapaja-ktane-19/hardware/backplane/GBR/"))
   )
 
   (net 0 "")
@@ -3131,7 +3131,7 @@
   (segment (start 143.970999 73.500999) (end 133.001001 73.500999) (width 0.25) (layer B.Cu) (net 49))
   (segment (start 145.109002 74.639002) (end 143.970999 73.500999) (width 0.25) (layer B.Cu) (net 49))
 
-  (zone (net 1) (net_name GND) (layer B.Cu) (tstamp 0) (hatch edge 0.508)
+  (zone (net 1) (net_name GND) (layer B.Cu) (tstamp 5DB738A3) (hatch edge 0.508)
     (connect_pads (clearance 0.508))
     (min_thickness 0.254)
     (fill yes (arc_segments 32) (thermal_gap 0.508) (thermal_bridge_width 0.508))

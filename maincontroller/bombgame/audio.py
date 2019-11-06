@@ -1,3 +1,5 @@
+from logging import getLogger
+
 import pygame
 
 SOUND_REGISTRY = {}
@@ -16,6 +18,7 @@ def load_sounds(module_classes):
                 LOADED_SOUNDS[sound] = pygame.mixer.Sound(sound) # TODO: locate sound folders
 
 def initialize_local_playback():
+    getLogger("Audio").info("Initializing local audio playback")
     pygame.mixer.init()
 
 def get_channel_configuration():

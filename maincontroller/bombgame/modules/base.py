@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from enum import Enum
 from threading import RLock
+from time import monotonic
 from typing import Tuple
 
 from ..bus.messages import StrikeModuleMessage, SolveModuleMessage, ModuleId
@@ -15,7 +16,7 @@ class Module(ABC):
     The base class for modules.
     """
 
-    __slots__ = ("_bomb", "bus_id", "location", "hw_version", "sw_version", "ping_time", "_state", "_state_lock")
+    __slots__ = ("_bomb", "bus_id", "location", "hw_version", "sw_version", "last_received", "last_ping_sent", "state")
 
     is_needy = False
     is_boss = False
@@ -26,35 +27,25 @@ class Module(ABC):
         self.location = location
         self.hw_version = hw_version
         self.sw_version = sw_version
-        self.ping_time = None
-        self._state = ModuleState.INITIALIZATION
-        self._state_lock = RLock()
-
-    @property
-    def state(self):
-        return self._state
-
-    @state.setter
-    def _set_state(self, state):
-        with self._state_lock:
-            self._state = state
+        self.last_received = self.last_ping_sent = monotonic()
+        self.state = ModuleState.INITIALIZATION
 
     @abstractmethod
     def generate(self):
         pass
 
     @abstractmethod
-    def prepare(self):
+    async def prepare(self):
         pass
 
-    def solve(self):
-        self._bomb.send(SolveModuleMessage(self.bus_id))
+    async def solve(self):
+        await self._bomb.bus.send(SolveModuleMessage(self.bus_id))
 
-    def strike(self, count=True):
+    async def strike(self, count=True):
         if count:
-            if self._bomb.strike():
+            if await self._bomb.strike():
                 return
-            self._bomb.bus.send(StrikeModuleMessage(self.bus_id))
+            await self._bomb.bus.send(StrikeModuleMessage(self.bus_id))
 
 class NeedyModule(Module): # pylint: disable=abstract-method
     is_needy = True

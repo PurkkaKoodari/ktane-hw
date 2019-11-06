@@ -4,6 +4,7 @@ from concurrent.futures import Executor, Future
 from logging import getLogger
 from typing import Any, Union, Callable
 from threading import Thread, RLock, Condition
+from asyncio import create_task, iscoroutinefunction
 
 class EventSource:
     """A mixin class that provides event listener functionality."""
@@ -23,7 +24,12 @@ class EventSource:
     def trigger(self, event: Any) -> None:
         for (eventclass, callback) in self.__listeners:
             if isinstance(event, eventclass):
-                callback(event)
+                if iscoroutinefunction(callback):
+                    create_task(callback(event))
+                else:
+                    async def call_callback(callback, event):
+                        callback(event)
+                    create_task(call_callback(callback, event))
 
 class Registry(dict):
     """A registry for registering classes.

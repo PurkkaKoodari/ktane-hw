@@ -72,14 +72,14 @@ class KeypadModule(Module):
                 self._buttons = buttons
                 self._solution = [key for key in solutions[0] if key in buttons]
 
-    def prepare(self):
-        self._bomb.bus.send(KeypadSetSolutionMessage(self.bus_id, sequence=self._solution))
+    async def prepare(self):
+        await self._bomb.bus.send(KeypadSetSolutionMessage(self.bus_id, sequence=self._solution))
 
-    def _handle_event(self, event: KeypadEventMessage):
+    async def _handle_event(self, event: KeypadEventMessage):
         if event.correct:
-            self.solve()
+            await self.solve()
         else:
-            self.strike()
+            await self.strike()
 
 @MODULE_MESSAGE_ID_REGISTRY.register
 class KeypadSetSolutionMessage(BusMessage):

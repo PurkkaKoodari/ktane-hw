@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import can
@@ -10,8 +11,10 @@ from .modules import load_modules
 from .utils import FatalError, AuxiliaryThreadExecutor
 
 def initialize_can():
-    can_bus = can.Bus(interface="socketcan", channel="can0") # TODO configuration for this
-    return can_bus
+    logging.getLogger("CANBus").info("Initializing CAN bus")
+    # TODO configuration for this
+    return can.Bus(interface="virtual", channel="mock")
+    # return can.Bus(interface="socketcan", channel="can0")
 
 def init_logging():
     logging.basicConfig(format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=logging.DEBUG)
@@ -23,8 +26,9 @@ def handle_fatal_error(error):
 # TODO move to configuration
 CASING = VanillaCasing()
 
-def main():
+async def main():
     init_logging()
+    logging.getLogger("BombGame").info("Loading modules")
     load_modules()
     initialize_local_playback()
     can_bus = initialize_can()
@@ -37,7 +41,8 @@ def main():
     audio_thread.start()
     # TODO do stuff
     audio_thread.shutdown(True)
-    bus.stop(True)
+    bus.stop()
+    gpio.stop()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

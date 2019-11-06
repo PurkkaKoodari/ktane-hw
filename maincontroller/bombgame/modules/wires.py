@@ -83,14 +83,14 @@ class WiresModule(Module):
         else:
             raise AssertionError("failed to generate solution")
 
-    def prepare(self):
+    async def prepare(self):
         pass
 
-    def _handle_event(self, event: WiresCutMessage):
+    async def _handle_event(self, event: WiresCutMessage):
         if event.position == self._solution:
-            self.solve()
+            await self.solve()
         else:
-            self.strike()
+            await self.strike()
 
 @MODULE_MESSAGE_ID_REGISTRY.register
 class WiresCutMessage(BusMessage):

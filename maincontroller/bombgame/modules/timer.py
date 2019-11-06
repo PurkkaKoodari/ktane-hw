@@ -16,11 +16,11 @@ class TimerModule(Module):
     def generate(self):
         pass
 
-    def prepare(self):
-        self._update_timer(None)
+    async def prepare(self):
+        await self._update_timer(None)
 
-    def _update_timer(self, _):
-        self._bomb.bus.send(SetTimerStateMessage(
+    async def _update_timer(self, _):
+        await self._bomb.bus.send(SetTimerStateMessage(
             self.bus_id,
             time_left=self._bomb.time_left,
             speed=self._bomb.timer_speed,

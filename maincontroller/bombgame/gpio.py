@@ -1,12 +1,12 @@
 from __future__ import annotations
 from collections import namedtuple
 from logging import getLogger
-from threading import Lock
+from asyncio import Lock, create_task, sleep as async_sleep, wrap_future
 
 from smbus import SMBus
 
 from .casings import Casing
-from .utils import AuxiliaryThread, EventSource
+from .utils import AuxiliaryThreadExecutor, EventSource
 
 def _validate_port_pin(port: MCP23017.Port, pin: int):
     if port is None:
@@ -246,37 +246,35 @@ class ModuleSenseChange:
         self.location = location
         self.present = present
 
-class GpioPollerThread(AuxiliaryThread):
-    def __init__(self, gpio):
-        super().__init__(name="GpioPoller")
-        self._gpio = gpio
-
-    def _run(self):
-        while not self._quit:
-            self._gpio.check_sense_changes()
-            with self._lock:
-                self._cond.wait_for(lambda: self._quit, GPIO_POLL_INTERVAL)
-
 class Gpio(EventSource):
+    """A class that manages all the MCP23017 chips in a Casing.
+
+    All public methods are asynchronous.
+    """
+
     _ModuleInfo = namedtuple("_ModuleInfo", ["mcp", "sense", "enable"])
     _WidgetInfo = namedtuple("_WidgetInfo", ["mcp", "widget"])
 
     def __init__(self, casing: Casing):
+        """Creates a Gpio object and synchronously initializes the MCP23017 chips."""
         super().__init__()
+        getLogger("GPIO").info("Initializing GPIO for %s", casing.__class__.__name__)
         self._mcps = []
         self._modules = []
         self._widgets = []
         self._prev_sense = [False] * casing.capacity
         self._lock = Lock()
-        self._poller = GpioPollerThread(self)
+        self._poller = None
+        self._executor = AuxiliaryThreadExecutor(name="GPIO")
         self._initialize_mcps(casing)
         self._initialize_interrupt()
         assert len(self._modules) == casing.capacity
         assert len(self._widgets) == casing.widget_capacity
 
     def _initialize_mcps(self, casing: Casing):
-        for spec in casing.gpio_config():
+        for spec in casing.gpio_config:
             assert len(spec.sense_pins) == len(spec.enable_pins)
+            getLogger("GPIO").debug("Initializing MCP23017 at SMBus %s address %#x", SMBUS_ADDR, spec.mcp23017_addr)
             mcp = MCP23017(SMBUS_ADDR, spec.mcp23017_addr)
             with mcp.begin_configuration():
                 mcp.configure_int_pins(mirror=True)
@@ -297,54 +295,81 @@ class Gpio(EventSource):
         try:
             import RPi.GPIO as GPIO
         except RuntimeError:
-            getLogger("GPIO").warning("Failed to initialize RPi.GPIO module. Module changes will be polled.")
+            getLogger("GPIO").warning("Failed to load RPi.GPIO module. Module sense interrupts will be disabled.")
             return
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(INTERRUPT_PIN, GPIO.IN)
         GPIO.add_event_detect(INTERRUPT_PIN, GPIO.FALLING, self.check_sense_changes)
 
     def start(self):
-        self._poller.start()
+        """Starts the GPIO auxiliary thread and module sense polling."""
+        if self._poller is not None:
+            raise RuntimeError("polling already started")
+        self._executor.start()
+        self._poller = create_task(self._poll_gpio_loop())
 
-    def stop(self, wait=True):
-        self._poller.stop()
-        if wait:
-            self._poller.join()
+    def stop(self):
+        """Stops the GPIO auxiliary thread and module sense polling."""
+        if self._poller is None:
+            raise RuntimeError("polling not started")
+        self._poller.cancel()
+        self._executor.shutdown(True)
 
-    def reset(self):
-        with self._lock:
-            for mcp in self._mcps:
-                mcp.begin_write()
-            for module in self._modules:
-                module.mcp.write_pin(module.enable, False)
-            for widget in self._widgets:
-                widget.mcp.write_pin(widget.widget, False)
-            for mcp in self._mcps:
-                mcp.end_write()
+    async def _poll_gpio_loop(self):
+        while True:
+            await self.check_sense_changes()
+            await async_sleep(GPIO_POLL_INTERVAL)
 
-    def check_sense_changes(self):
-        with self._lock:
-            for mcp in self._mcps:
-                mcp.begin_read()
-            for location, module in enumerate(self._modules):
-                current = module.mcp.read_pin(module.enable)
-                if current != self._prev_sense[location]:
-                    self.trigger(ModuleSenseChange(location, current))
-                self._prev_sense[location] = current
-            for mcp in self._mcps:
-                mcp.end_read()
+    async def reset(self):
+        """Resets all module enable and widget pins to off."""
+        async with self._lock:
+            await wrap_future(self._executor.submit(self._sync_reset))
+
+    def _sync_reset(self):
+        for mcp in self._mcps:
+            mcp.begin_write()
+        for module in self._modules:
+            module.mcp.write_pin(module.enable, False)
+        for widget in self._widgets:
+            widget.mcp.write_pin(widget.widget, False)
+        for mcp in self._mcps:
+            mcp.end_write()
+
+    async def check_sense_changes(self):
+        """Polls for changes in module sense pins and returns the locations of currently connected modules."""
+        async with self._lock:
+            await wrap_future(self._executor.submit(self._sync_check_sense_changes))
         return [location for location in range(len(self._modules)) if self._prev_sense[location]]
 
-    def set_enable(self, location: int, enabled: bool):
+    def _sync_check_sense_changes(self):
+        for mcp in self._mcps:
+            mcp.begin_read()
+        for location, module in enumerate(self._modules):
+            current = module.mcp.read_pin(module.enable)
+            if current != self._prev_sense[location]:
+                self.trigger(ModuleSenseChange(location, current))
+            self._prev_sense[location] = current
+        for mcp in self._mcps:
+            mcp.end_read()
+
+    async def set_enable(self, location: int, enabled: bool):
+        """Sets the state of a single module enable pin."""
         if not 0 <= location < len(self._modules):
             raise ValueError("module location out of range")
-        with self._lock:
-            module = self._modules[location]
-            module.mcp.write_pin(module.enable, enabled)
+        async with self._lock:
+            await wrap_future(self._executor.submit(self._sync_set_enable, location, enabled))
 
-    def set_widget(self, location: int, value: bool):
+    def _sync_set_enable(self, location: int, enabled: bool):
+        module = self._modules[location]
+        module.mcp.write_pin(module.enable, enabled)
+
+    async def set_widget(self, location: int, value: bool):
+        """Sets the state of a single widget pin."""
         if not 0 <= location <= len(self._widgets):
             raise ValueError("widget location out of range")
-        with self._lock:
-            widget = self._widgets[location]
-            widget.mcp.write_pin(widget.widget, value)
+        async with self._lock:
+            await wrap_future(self._executor.submit(self._sync_set_widget, location, value))
+
+    def _sync_set_widget(self, location: int, value: bool):
+        widget = self._widgets[location]
+        widget.mcp.write_pin(widget.widget, value)

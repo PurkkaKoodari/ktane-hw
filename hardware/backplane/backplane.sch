@@ -2090,4 +2090,27 @@ Wire Wire Line
 	2850 4700 2850 4500
 Wire Wire Line
 	2850 4500 2600 4500
+$Comp
+L backplane-rescue:Conn_01x02_Male-Connector J3
+U 1 1 5DC6B261
+P 7100 13900
+F 0 "J3" H 7208 14081 50  0000 C CNN
+F 1 "Conn_01x02_Male-Connector" H 7208 13990 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 7100 13900 50  0001 C CNN
+F 3 "" H 7100 13900 50  0001 C CNN
+	1    7100 13900
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7300 13900 7650 13900
+Wire Wire Line
+	7650 13900 7650 14100
+Wire Wire Line
+	7650 14100 7700 14100
+Wire Wire Line
+	7300 14000 7600 14000
+Wire Wire Line
+	7600 14000 7600 14200
+Wire Wire Line
+	7600 14200 7700 14200
 $EndSCHEMATC

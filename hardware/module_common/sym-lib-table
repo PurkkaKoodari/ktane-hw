@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name WAVGAT_CAN)(type Legacy)(uri "/home/sampsa/Opinnot/Elektroniikkapaja-ktane-19/hardware/symbols/WAVGAT CAN/WAVGAT_CAN.lib")(options "")(descr ""))
+  (lib (name ProjectChips)(type Legacy)(uri /home/sampsa/Opinnot/Elektroniikkapaja-ktane-19/hardware/symbols/ProjectChips/ProjectChips.lib)(options "")(descr ""))
+)

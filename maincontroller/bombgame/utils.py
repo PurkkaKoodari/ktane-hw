@@ -4,7 +4,7 @@ from concurrent.futures import Executor, Future
 from logging import getLogger
 from typing import Any, Union, Callable
 from threading import Thread, RLock, Condition
-from asyncio import create_task, iscoroutinefunction
+from asyncio import get_event_loop, create_task, iscoroutinefunction
 
 class EventSource:
     """A mixin class that provides event listener functionality."""
@@ -27,9 +27,7 @@ class EventSource:
                 if iscoroutinefunction(callback):
                     create_task(callback(event))
                 else:
-                    async def call_callback(callback, event):
-                        callback(event)
-                    create_task(call_callback(callback, event))
+                    get_event_loop().call_soon(callback, event)
 
 class Registry(dict):
     """A registry for registering classes.
@@ -128,8 +126,8 @@ class AuxiliaryThreadExecutor(Executor, AuxiliaryThread):
     def _run(self):
         while self._queue or not self._quit:
             task = self._get_task(process_all=True)
+            func, args, kwargs, future = task
             try:
-                func, args, kwargs, future = task
                 future.set_result(func(*args, **kwargs))
             except Exception as ex: # pylint: disable=broad-except
                 future.set_exception(ex)

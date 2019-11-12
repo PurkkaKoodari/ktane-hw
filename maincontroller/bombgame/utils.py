@@ -4,7 +4,8 @@ from concurrent.futures import Executor, Future
 from logging import getLogger
 from typing import Any, Union, Callable
 from threading import Thread, RLock, Condition
-from asyncio import get_event_loop, create_task, iscoroutinefunction
+from asyncio import get_event_loop, create_task, iscoroutinefunction, Lock as AsyncLock
+
 
 class EventSource:
     """A mixin class that provides event listener functionality."""
@@ -12,22 +13,37 @@ class EventSource:
     def __init__(self):
         self.__listeners = []
 
-    def add_listener(self, eventclass: type, callback: Callable) -> None:
-        self.__listeners.append((eventclass, callback))
+    def add_listener(self, eventclass: type, callback: Callable, reentrant: bool = False) -> None:
+        lock = None if reentrant else AsyncLock()
+        self.__listeners.append((eventclass, callback, lock))
 
     def remove_listener(self, eventclass: type, callback: Callable) -> None:
         try:
-            self.__listeners.remove((eventclass, callback))
+            for listener in self.__listeners:
+                if listener[0] == eventclass and listener[1] == callback:
+                    self.__listeners.remove(listener)
         except ValueError:
             raise ValueError("listener not found") from None
 
     def trigger(self, event: Any) -> None:
-        for (eventclass, callback) in self.__listeners:
+        for (eventclass, callback, lock) in self.__listeners:
             if isinstance(event, eventclass):
-                if iscoroutinefunction(callback):
-                    create_task(callback(event))
+                if lock is None:
+                    if iscoroutinefunction(callback):
+                        create_task(callback(event))
+                    else:
+                        get_event_loop().call_soon(callback, event)
                 else:
-                    get_event_loop().call_soon(callback, event)
+                    create_task(_call_event(callback, lock, event))
+
+
+async def _call_event(callback, lock, event):
+    async with lock:
+        if iscoroutinefunction(callback):
+            await callback(event)
+        else:
+            callback(event)
+
 
 class Registry(dict):
     """A registry for registering classes.

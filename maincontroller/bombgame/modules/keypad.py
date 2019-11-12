@@ -72,12 +72,18 @@ class KeypadModule(Module):
                 self._buttons = buttons
                 self._solution = [key for key in solutions[0] if key in buttons]
 
-    async def prepare(self):
+    async def send_state(self):
         await self._bomb.bus.send(KeypadSetSolutionMessage(self.bus_id, sequence=self._solution))
+
+    def ui_state(self):
+        return {
+            "buttons": [button.name for button in self._buttons],
+            "solution": self._solution
+        }
 
     async def _handle_event(self, event: KeypadEventMessage):
         if event.correct:
-            await self.solve()
+            await self.defuse()
         else:
             await self.strike()
 

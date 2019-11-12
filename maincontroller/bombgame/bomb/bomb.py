@@ -1,21 +1,27 @@
 from enum import Enum
 from time import monotonic
-from asyncio import Lock, Condition, TimeoutError as AsyncTimeoutError, create_task, shield, sleep as async_sleep, wait_for
+from asyncio import Lock, Condition, TimeoutError as AsyncTimeoutError, CancelledError, create_task, shield, sleep as async_sleep, wait_for
 
-from .bus.bus import BombBus
-from .casings import Casing
-from .events import BombWarning, BombInitFailure
-from .gpio import Gpio, ModuleSenseChange
-from .bus.messages import BusMessage, ResetMessage, AnnounceMessage, InitCompleteMessage, PingMessage, DefuseBombMessage, ExplodeBombMessage, ModuleId
-from .modules.registry import MODULE_ID_REGISTRY
-from .modules.base import ModuleState
-from .modules.timer import TimerModule
-from .utils import EventSource
+from ..bus.bus import BombBus
+from ..casings import Casing
+from ..events import BombErrorLevel, BombError, BombModuleAdded, ModuleStateChange, BombStateChange
+from ..gpio import Gpio, ModuleSenseChange
+from ..bus.messages import BusMessage, ResetMessage, AnnounceMessage, InitCompleteMessage, PingMessage, DefuseBombMessage, ExplodeBombMessage, ModuleId
+from ..modules.registry import MODULE_ID_REGISTRY
+from ..modules.base import ModuleState
+from ..modules.timer import TimerModule
+from ..utils import EventSource
+from .serial import BombSerial
 
 class BombState(Enum):
     UNINITIALIZED = 0
-    INITIALIZING_MODULES = 1
-    MODULES_INITIALIZED = 2
+    RESETTING = 1
+    INITIALIZING = 2
+    INITIALIZED = 3
+    GAME_STARTING = 4
+    GAME_STARTED = 5
+    GAME_PAUSED = 6
+    GAME_ENDED = 7
     INITIALIZATION_FAILED = -1
     DEINITIALIZED = -2
 
@@ -31,7 +37,7 @@ class Bomb(EventSource):
 
     DEFAULT_MAX_STRIKES = 3
 
-    def __init__(self, bus: BombBus, gpio: Gpio, casing: Casing, *, max_strikes=DEFAULT_MAX_STRIKES):
+    def __init__(self, bus: BombBus, gpio: Gpio, casing: Casing, *, max_strikes: int = DEFAULT_MAX_STRIKES, serial_number: str = None):
         super().__init__()
         self.bus = bus
         self._gpio = gpio
@@ -43,6 +49,8 @@ class Bomb(EventSource):
         self.strikes = 0
         self.time_left = 0.0
         self.timer_speed = 1.0
+        self.widgets = []  # TODO fill and control these
+        self.serial_number = BombSerial(serial_number)  # TODO display this somewhere
         self._state = BombState.UNINITIALIZED
         self._init_location = None
         self._state_lock = Lock()
@@ -51,18 +59,15 @@ class Bomb(EventSource):
         bus.add_listener(BusMessage, self._receive_message)
         gpio.add_listener(ModuleSenseChange, self._sense_change)
 
-    def _sense_change(self, _):
-        if self._state != BombState.UNINITIALIZED:
-            pass # TODO handle module changes
-
     async def initialize(self):
         if self._state != BombState.UNINITIALIZED:
-            raise RuntimeError("can't reinitialize used Bomb")
+            raise RuntimeError("Bomb already initialized")
         # reset GPIO and get currently connected modules
         await self._state_lock.acquire()
-        self._state = BombState.INITIALIZING_MODULES
+        self._state = BombState.RESETTING
         await self._gpio.reset()
         connected_modules = await self._gpio.check_sense_changes()
+        self._state = BombState.INITIALIZING
         # send reset to all modules
         await self.bus.send(ResetMessage(ModuleId.BROADCAST))
         # wait for modules to reset
@@ -87,35 +92,49 @@ class Bomb(EventSource):
             self._init_fail("no timer found on bomb")
             return
         # wait for all modules to initialize
-        await self._init_cond.wait_for(lambda: self._state == BombState.MODULES_INITIALIZED)
+        await self._init_cond.wait_for(lambda: self._state == BombState.INITIALIZED)
         self._state_lock.release()
         self._pinger = create_task(self._ping_loop())
+        self.trigger(BombStateChange(BombState.INITIALIZED))
 
-    def stop(self):
+    def deinitialize(self):
+        if self._state == BombState.DEINITIALIZED:
+            raise RuntimeError("Bomb already deinitialized")
         if self._pinger is not None:
             self._pinger.cancel()
         self.bus.remove_listener(BusMessage, self._receive_message)
         self._gpio.remove_listener(ModuleSenseChange, self._sense_change)
         self._state = BombState.DEINITIALIZED
 
+    def _sense_change(self, change: ModuleSenseChange):
+        if self._state != BombState.UNINITIALIZED:
+            if change.present:
+                self.trigger(BombError(None, BombErrorLevel.WARNING, f"A module was added at {self.casing.location(change.location)} after initialization."))
+            else:
+                module = self.modules_by_location.get(change.location)
+                if module is None:
+                    self.trigger(BombError(None, BombErrorLevel.WARNING, f"A module was removed at {self.casing.location(change.location)} after initialization."))
+                else:
+                    self.trigger(BombError(module, BombErrorLevel.WARNING, f"Module was removed after initialization."))
+
     def _init_fail(self, reason):
         self._state = BombState.INITIALIZATION_FAILED
-        self.trigger(BombInitFailure(reason))
+        self.trigger(BombError(None, BombErrorLevel.INIT_FAILURE, reason))
 
     async def _receive_message(self, message: BusMessage):
         async with self._state_lock:
-            if self._state == BombState.UNINITIALIZED:
+            if self._state == BombState.UNINITIALIZED or self._state == BombState.DEINITIALIZED:
                 return
             if isinstance(message, AnnounceMessage):
-                if self._state != BombState.INITIALIZING_MODULES:
+                if self._state != BombState.INITIALIZING:
                     # TODO implement module hotswap
-                    self.trigger(BombWarning(f"late announce from {message.module}"))
+                    self.trigger(BombError(None, BombErrorLevel.WARNING, f"{message.module} was announced after initialization."))
                     return
                 if message.module in self.modules_by_bus_id:
-                    self._init_fail(f"duplicate module with id {message.module}")
+                    self._init_fail(f"Multiple modules were announced with id {message.module}.")
                     return
                 if self._init_location is None:
-                    self._init_fail(f"unrequested announce from {message.module}")
+                    self._init_fail(f"An unrequested announce was received from {message.module}.")
                     return
                 module = MODULE_ID_REGISTRY[message.module.type](self, message.module, self._init_location, message.hw_version, message.sw_version)
                 if message.init_complete:
@@ -123,24 +142,26 @@ class Bomb(EventSource):
                 self.modules_by_bus_id[message.module] = module
                 self.modules_by_location[self._init_location] = module
                 self.modules.append(module)
+                self.trigger(BombModuleAdded(module))
                 self._init_location = None
                 self._init_cond.notify_all()
                 return
             module = self.modules_by_bus_id.get(message.module)
             if module is None:
-                self.trigger(BombWarning(f"{message.__class__.__name__} from unannounced {message.module}"))
+                self.trigger(BombError(None, BombErrorLevel.WARNING, f"Received {message.__class__.__name__} from unannounced module {message.module}."))
                 return
             module.last_received = monotonic()
             if isinstance(message, InitCompleteMessage) and module.state == ModuleState.INITIALIZATION:
                 module.state = ModuleState.CONFIGURATION
-                if self._state == BombState.INITIALIZING_MODULES and all(module.state == ModuleState.CONFIGURATION for module in self.modules_by_bus_id.values()):
-                    self._state = BombState.MODULES_INITIALIZED
+                self.trigger(ModuleStateChange(module))
+                if self._state == BombState.INITIALIZING and all(module.state == ModuleState.CONFIGURATION for module in self.modules_by_bus_id.values()):
+                    self._state = BombState.INITIALIZED
                     self._init_cond.notify_all()
                 return
             if isinstance(message, PingMessage) and module.last_ping_sent is not None:
                 module.last_ping_sent = None
                 return
-            self.trigger(BombWarning(f"{message.__class__.__name__} from {message.module} in an invalid state"))
+            self.trigger(BombError(module, BombErrorLevel.WARNING, f"Received {message.__class__.__name__} in an invalid state."))
 
     async def _ping_loop(self):
         while True:
@@ -148,7 +169,7 @@ class Bomb(EventSource):
             for module in self.modules:
                 if module.last_ping_sent is not None and now > module.last_ping_sent + MODULE_PING_TIMEOUT:
                     # TODO module auto-restart?
-                    self.trigger(BombWarning(f"ping timeout for {module.bus_id}"))
+                    self.trigger(BombError(module, BombErrorLevel.WARNING, "Ping timeout."))
                 elif module.last_ping_sent is None and now > module.last_received + MODULE_PING_INTERVAL:
                     await self.bus.send(PingMessage(module.bus_id))
             await async_sleep(0.1)

@@ -6,6 +6,7 @@ import struct
 
 import can
 
+from ..events import BombErrorLevel
 from ..modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
 from ..utils import Registry, Ungettable
 
@@ -187,8 +188,10 @@ class ModuleStatusMessage(StatusMessage):
 class ErrorMessage(StatusMessage):
     __slots__ = ("code", "details")
 
+    error_level = Ungettable
+
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *, code: int, details: bytes):
-        super().__init__(self.__class__.message_id, module, direction)
+        super().__init__(module, direction)
         if len(details) > 7:
             raise ValueError("error details must be up to 7 bytes")
         self.code = code
@@ -278,15 +281,19 @@ class NeedyDeactivateMessage(ModuleStatusMessage):
 @MESSAGE_ID_REGISTRY.register
 class RecoverableErrorMessage(ErrorMessage):
     message_id = BusMessageId.RECOVERABLE_ERROR
+    error_level = BombErrorLevel.RECOVERABLE
 
 @MESSAGE_ID_REGISTRY.register
 class RecoveredErrorMessage(ErrorMessage):
     message_id = BusMessageId.RECOVERED_ERROR
+    error_level = BombErrorLevel.RECOVERED
 
 @MESSAGE_ID_REGISTRY.register
 class MinorUnrecoverableErrorMessage(ErrorMessage):
     message_id = BusMessageId.MINOR_UNRECOVERABLE_ERROR
+    error_level = BombErrorLevel.MINOR
 
 @MESSAGE_ID_REGISTRY.register
 class MajorUnrecoverableErrorMessage(ErrorMessage):
     message_id = BusMessageId.MAJOR_UNRECOVERABLE_ERROR
+    error_level = BombErrorLevel.MAJOR

@@ -61,12 +61,13 @@ RULES = {
 class WiresModule(Module):
     module_id = 2
 
-    __slots__ = ("_wires", "_slots", "_solution")
+    __slots__ = ("_wires", "_slots", "_cut", "_solution")
 
     def __init__(self, bomb, bus_id, location, hw_version, sw_version):
         super().__init__(bomb, bus_id, location, hw_version, sw_version)
         self._wires = None
         self._slots = [None] * 6
+        self._cut = [False] * 6
         self._solution = None
         bomb.bus.add_listener(WiresCutMessage, self._handle_event)
 
@@ -83,12 +84,20 @@ class WiresModule(Module):
         else:
             raise AssertionError("failed to generate solution")
 
-    async def prepare(self):
+    async def send_state(self):
         pass
 
+    def ui_state(self):
+        return {
+            "wires": ["EMPTY" if wire is None else wire.name for wire in self._slots],
+            "cut": self._cut,
+            "solutions": self._solution
+        }
+
     async def _handle_event(self, event: WiresCutMessage):
+        self._cut[event.position] = True
         if event.position == self._solution:
-            await self.solve()
+            await self.defuse()
         else:
             await self.strike()
 

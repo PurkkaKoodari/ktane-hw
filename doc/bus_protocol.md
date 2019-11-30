@@ -2,7 +2,7 @@
 
 This document specifies the protocol used for communication over the CAN bus between modules and the main controller.
 
-This specification is version `1.0-alpha7`.
+This specification is version `1.0-alpha8`.
 
 ## Definitions
 
@@ -20,8 +20,8 @@ The module interface MUST contain at least the following signals:
 
 - Ground (GND)
 - CAN bus (CAN_L and CAN_H)
-- MODULE_SENSE (pulled to ground by the module when connected)
-- MODULE_ENABLE (digital signal from the MC to the module)
+- MODULE_READY (module to MC, active low, pulled high by MC)
+- MODULE_ENABLE (MC to module, active low, pulled high by module)
 
 ## Message types
 
@@ -35,9 +35,9 @@ Modules can send _event_ messages to the MC. Event messages MUST NOT require res
 
 ## Module states
 
-When a module is powered up, or when a module in any mode receives a Reset (0x00) message, it enters _reset mode_. Modules in this mode MUST completely ignore all messages except for the Reset (0x00) message and MUST NOT send any messages.
+When a module is powered up, or when a module in any mode receives a Reset (0x00) message, it enters _reset mode_. Modules in this mode MUST assert the MODULE_READY signal, MUST completely ignore all messages except for the Reset (0x00) message and MUST NOT send any messages.
 
-When the MODULE_ENABLE signal goes high, a module in _reset mode_ enters _initialization mode_ and sends an Announce (0x01) message. If the module's reset sequence is complete, it may immediately enter _configuration mode_; otherwise it completes its reset sequence and then sends an Init complete (0x02) message to enter _configuration mode_.
+When the MODULE_ENABLE signal goes low, a module in _reset mode_ de-asserts the MODULE_READY signal, sends an Announce (0x01) message and enters _initialization mode_. If the module's reset sequence is complete, it may immediately enter _configuration mode_; otherwise it completes its reset sequence and then sends an Init complete (0x02) message to enter _configuration mode_.
 
 _Configuration mode_ is used to send game settings to modules using module-specific messages (message IDs 0x30-0x3f).
 
@@ -84,7 +84,7 @@ The following message IDs are defined:
 
 | Number | Name | Type | Data length | Valid in modes |
 |--------|------|------|-------------|----------------|
-| 0x00 | Reset | broadcast | 0 | all |
+| 0x00 | Reset | request, broadcast | 0 | all |
 | 0x01 | Announce | event | 5 | reset |
 | 0x02 | Init complete | event | 0 | initialization |
 | 0x03 | Ping | request, response | 0 | all except reset |
@@ -106,16 +106,16 @@ Each message ID is described in detail below.
 
 ### ID 0x00: Reset
 
-This message is sent by the MC as a broadcast message. The message contains no data.
+This message is sent by the MC. It may be sent as a broadcast message. It is valid for modules in all modes. The message contains no data.
 
 Upon receiving it, a module MUST perform a soft reset:
 
 - Stop all processing of previous messages and user actions
 - Reset all state variables to their initial state
-- Restore user interface elements to their initial state
-- Enter _reset mode_
+- Restore user interface elements to a known state
+- Enter _reset mode_ and assert the MODULE_READY signal
 
-This process MUST be reasonably fast; the module SHOULD be in _reset mode_ monitoring the MODULE_ENABLE line within 100ms and MUST be within 500ms of receiving this message. Actions that take time to finish (such as resetting moving parts or performing large transfers) MUST NOT delay responding to the MODULE_ENABLE signal; the Init complete (0x02) message is used to indicate the completion of a long-running reset sequence.
+This process MUST be reasonably fast; the module SHOULD be in _reset mode_ monitoring the MODULE_ENABLE line within 100ms and MUST be within 500ms of receiving this message. Actions that take time to finish (such as resetting moving parts or performing large data transfers) MUST NOT delay responding to the MODULE_ENABLE signal; the Init complete (0x02) message is used to indicate the completion of a long-running reset sequence.
 
 ### ID 0x01: Announce
 
@@ -130,7 +130,7 @@ This message is sent by a module. It is only valid for modules in _reset mode_. 
 | 32-38 | 7 | reserved | Reserved, must be zero. |
 | 39 | 1 | init complete | 1 if the reset sequence is complete and the module will enter _configuration mode_, 0 otherwise. |
 
-When the MODULE_ENABLE line goes high while a module is in _reset mode_, or is high when entering the mode, the module MUST send this message and enter _initialization mode_.
+When the MODULE_ENABLE line goes low while a module is in _reset mode_, or is low when entering the mode, the module MUST de-assert the MODULE_READY signal, send this message and enter _initialization mode_. MODULE_READY must be de-asserted before sending the message.
 
 If the module's reset sequence is complete, it SHOULD set the `init complete` bit in this message and enter _configuration mode_ upon sending it. If a module sends this message with the `init complete` bit unset, it MUST send an Init complete (0x02) message upon completing the reset sequence.
 

@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod, abstractproperty
 from collections import namedtuple
 from typing import Iterable
 
-MCP23017Spec = namedtuple("MCP23017Pins", ["mcp23017_addr", "sense_pins", "enable_pins", "widget_pins"])
+MCP23017Spec = namedtuple("MCP23017Pins", ["mcp23017_addr", "ready_pins", "enable_pins", "widget_pins"])
 
 class Casing(ABC):
     """

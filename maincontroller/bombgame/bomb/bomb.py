@@ -5,7 +5,7 @@ from asyncio import Lock, Condition, TimeoutError as AsyncTimeoutError, Cancelle
 from ..bus.bus import BombBus
 from ..casings import Casing
 from ..events import BombErrorLevel, BombError, BombModuleAdded, ModuleStateChange, BombStateChange
-from ..gpio import Gpio, ModuleSenseChange
+from ..gpio import Gpio, ModuleReadyChange
 from ..bus.messages import BusMessage, ResetMessage, AnnounceMessage, InitCompleteMessage, PingMessage, DefuseBombMessage, ExplodeBombMessage, ModuleId
 from ..modules.registry import MODULE_ID_REGISTRY
 from ..modules.base import ModuleState
@@ -57,23 +57,24 @@ class Bomb(EventSource):
         self._init_cond = Condition(self._state_lock)
         self._pinger = None
         bus.add_listener(BusMessage, self._receive_message)
-        gpio.add_listener(ModuleSenseChange, self._sense_change)
+        gpio.add_listener(ModuleReadyChange, self._module_ready_change)
 
     async def initialize(self):
         if self._state != BombState.UNINITIALIZED:
             raise RuntimeError("Bomb already initialized")
-        # reset GPIO and get currently connected modules
         await self._state_lock.acquire()
         self._state = BombState.RESETTING
+        # reset enable and widget pins
         await self._gpio.reset()
-        connected_modules = await self._gpio.check_sense_changes()
-        self._state = BombState.INITIALIZING
         # send reset to all modules
         await self.bus.send(ResetMessage(ModuleId.BROADCAST))
         # wait for modules to reset
         self._state_lock.release()
         await async_sleep(MODULE_RESET_PERIOD)
         await self._state_lock.acquire()
+        # get modules that are ready
+        connected_modules = await self._gpio.check_ready_changes()
+        self._state = BombState.INITIALIZING
         # initialize each module in order
         for location in connected_modules:
             # check that we have not failed yet
@@ -103,10 +104,10 @@ class Bomb(EventSource):
         if self._pinger is not None:
             self._pinger.cancel()
         self.bus.remove_listener(BusMessage, self._receive_message)
-        self._gpio.remove_listener(ModuleSenseChange, self._sense_change)
+        self._gpio.remove_listener(ModuleReadyChange, self._module_ready_change)
         self._state = BombState.DEINITIALIZED
 
-    def _sense_change(self, change: ModuleSenseChange):
+    def _module_ready_change(self, change: ModuleReadyChange):
         if self._state != BombState.UNINITIALIZED:
             if change.present:
                 self.trigger(BombError(None, BombErrorLevel.WARNING, f"A module was added at {self.casing.location(change.location)} after initialization."))
@@ -123,7 +124,7 @@ class Bomb(EventSource):
 
     async def _receive_message(self, message: BusMessage):
         async with self._state_lock:
-            if self._state == BombState.UNINITIALIZED or self._state == BombState.DEINITIALIZED:
+            if self._state == BombState.UNINITIALIZED or self._state == BombState.RESETTING or self._state == BombState.DEINITIALIZED:
                 return
             if isinstance(message, AnnounceMessage):
                 if self._state != BombState.INITIALIZING:

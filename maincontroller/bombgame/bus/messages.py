@@ -20,6 +20,8 @@ class ModuleId:
     A module identifier as used on the bus.
     """
 
+    BROADCAST: ModuleId
+
     def __init__(self, type_: int, serial: int):
         if not 0 <= type_ <= MODULEID_TYPE_MAX:
             raise ValueError(f"type must be between 0 and {MODULEID_TYPE_MAX}")

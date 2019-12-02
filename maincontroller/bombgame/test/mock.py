@@ -5,11 +5,14 @@ from typing import List, Callable
 import can
 
 from ..bus.bus import BombBus
-from ..bus.messages import ModuleId, BusMessageDirection, BusMessage, AnnounceMessage, ResetMessage
+from ..bus.messages import (ModuleId, BusMessageDirection, BusMessage, AnnounceMessage, ResetMessage,
+                            InitCompleteMessage, PingMessage, LaunchGameMessage, StartTimerMessage, ExplodeBombMessage,
+                            DefuseBombMessage, StrikeModuleMessage, SolveModuleMessage, NeedyActivateMessage,
+                            NeedyDeactivateMessage)
 from ..gpio import AbstractGpio, ModuleReadyChange
-from ..modules.base import ModuleState
-from ..modules.simonsays import SimonSaysModule, SimonColor, SimonButtonPressMessage
-from ..modules.timer import TimerModule
+from ..modules.registry import MODULE_ID_REGISTRY
+from ..modules.simonsays import SimonSaysModule, SimonColor, SimonButtonPressMessage, SimonButtonBlinkMessage
+from ..modules.timer import TimerModule, SetTimerStateMessage
 from ..utils import EventSource
 
 
@@ -33,12 +36,15 @@ class MockGpio(AbstractGpio):
         self._widget_pins = {}
 
     def get_enable_state(self, location: int) -> bool:
+        """Gets the state of a virtual enable pin. Called by testing code."""
         return self._enable_pins.get(location, False)
 
     def get_widget_state(self, location: int) -> bool:
+        """Gets the state of a virtual widget pin. Called by testing code."""
         return self._widget_pins.get(location, False)
 
     def set_ready_state(self, location: int, present: bool):
+        """Sets the state of a virtual ready pin. Called by testing code."""
         if self._ready_pins.get(location, False) != present:
             self._ready_pins[location] = present
             self.trigger(ModuleReadyChange(location, present))
@@ -69,9 +75,10 @@ class PhysicalModuleState(Enum):
     CONFIGURATION = 2
     GAME = 3
     UNPLUGGED = -1
+    CRASHED = -2
 
 
-class MockModule(ABC, EventSource):
+class MockPhysicalModule(ABC, EventSource):
     def __init__(self, bus: BombBus, gpio: MockGpio, location: int, module_id: ModuleId):
         EventSource.__init__(self)
         self._bus = bus
@@ -79,29 +86,27 @@ class MockModule(ABC, EventSource):
         self.location = location
         self.module_id = module_id
         self.state = PhysicalModuleState.UNPLUGGED
+        self.solved = False
+        self.strikes = 0
         self._reset_state()
         gpio.add_listener(MockGpioEnableChange, self._handle_enable_change)
         bus.add_listener(BusMessage, self._handle_message)
 
-    def plug(self):
-        if self.state != PhysicalModuleState.UNPLUGGED:
-            raise RuntimeError("module already plugged in")
-        self._soft_reset()
-
     def unplug(self):
-        if self.state == PhysicalModuleState.UNPLUGGED:
-            raise RuntimeError("module not plugged in")
         self.state = PhysicalModuleState.UNPLUGGED
         self._reset_state()
         self._gpio.set_ready_state(self.location, False)
 
+    def crash(self):
+        self.state = PhysicalModuleState.CRASHED
+
     def _handle_enable_change(self, event: MockGpioEnableChange):
-        if self.state == PhysicalModuleState.UNPLUGGED:
+        if self.state in (PhysicalModuleState.UNPLUGGED, PhysicalModuleState.CRASHED):
             return
         if event.location == self.location and event.state and self.state == PhysicalModuleState.RESET:
             self._enter_init()
 
-    def _soft_reset(self):
+    def hard_reset(self):
         self.state = PhysicalModuleState.RESET
         self._reset_state()
         if self._gpio.get_enable_state(self.location):
@@ -111,8 +116,15 @@ class MockModule(ABC, EventSource):
 
     def _enter_init(self):
         self._gpio.set_ready_state(self.location, False)
-        self._announce()
         self.state = PhysicalModuleState.INITIALIZATION
+        hw_version, sw_version, init_complete = self._announce()
+        await self._bus.send(AnnounceMessage(self.module_id, BusMessageDirection.IN, hw_version=hw_version, sw_version=sw_version, init_complete=init_complete))
+        if init_complete:
+            self.state = PhysicalModuleState.CONFIGURATION
+
+    async def _init_complete(self):
+        await self._bus.send(InitCompleteMessage(self.module_id, BusMessageDirection.IN))
+        self.state = PhysicalModuleState.CONFIGURATION
 
     @abstractmethod
     def _reset_state(self):
@@ -123,34 +135,70 @@ class MockModule(ABC, EventSource):
         pass
 
     def _handle_message(self, message: BusMessage):
+        if self.state in (PhysicalModuleState.UNPLUGGED, PhysicalModuleState.CRASHED):
+            return
         if isinstance(message, ResetMessage):
-            self._soft_reset()
+            self.hard_reset()
             return
-        if self.state == ModuleState.RESET:
+        if self.state == PhysicalModuleState.RESET:
             return
-        # TODO handle more messages
+        if isinstance(message, PingMessage):
+            self._bus.send(PingMessage(self.module_id, BusMessageDirection.IN))
+            return
+        default_handled = False
+        if isinstance(message, LaunchGameMessage):
+            self.state = PhysicalModuleState.GAME
+            default_handled = True
+        if isinstance(message, StrikeModuleMessage):
+            self.strikes += 1
+            default_handled = True
+        if isinstance(message, SolveModuleMessage):
+            self.solved = True
+            default_handled = True
+        if isinstance(message, (StartTimerMessage, ExplodeBombMessage, DefuseBombMessage)):
+            default_handled = True
+        if isinstance(message, (NeedyActivateMessage, NeedyDeactivateMessage)) and self._module_class().is_needy:
+            default_handled = True
+        if self._handle_module_message(message):
+            return
+        if not default_handled:
+            raise AssertionError(f"{self.module_id} got unexpected {message.__class__.__name__}")
+
+    @abstractmethod
+    def _handle_module_message(self, message: BusMessage) -> bool:
+        pass
+
+    def _module_class(self):
+        return MODULE_ID_REGISTRY[self.module_id.type]
 
 
-class MockTimerModule(MockModule):
+class MockPhysicalTimer(MockPhysicalModule):
     displayed_time: float
     speed: float
 
     def __init__(self, bus: BombBus, gpio: MockGpio, location: int, serial: int = 0):
-        MockModule.__init__(self, bus, gpio, location, ModuleId(TimerModule.module_id, serial))
+        MockPhysicalModule.__init__(self, bus, gpio, location, ModuleId(TimerModule.module_id, serial))
 
     def _reset_state(self):
         self.displayed_time = 0.0
         self.speed = 0.0
 
-    async def _announce(self):
-        await self._bus.send(AnnounceMessage(self.module_id, BusMessageDirection.IN, hw_version=(1, 0), sw_version=(1, 0), init_complete=True))
+    def _announce(self):
+        return (1, 0), (1, 0), True
+
+    def _handle_module_message(self, message: BusMessage) -> bool:
+        if isinstance(message, SetTimerStateMessage):
+            self.displayed_time = message.secs
+            self.speed = message.speed
+            return True
+        return False
 
 
-class MockSimonModule(MockModule):
+class MockPhysicalSimon(MockPhysicalModule):
     blinks: list
 
     def __init__(self, bus: BombBus, gpio: MockGpio, location: int, serial: int = 0):
-        MockModule.__init__(self, bus, gpio, location, ModuleId(SimonSaysModule.module_id, serial))
+        MockPhysicalModule.__init__(self, bus, gpio, location, ModuleId(SimonSaysModule.module_id, serial))
 
     def _reset_state(self):
         self.blinks = []
@@ -160,3 +208,9 @@ class MockSimonModule(MockModule):
 
     async def _announce(self):
         await self._bus.send(AnnounceMessage(self.module_id, BusMessageDirection.IN, hw_version=(1, 0), sw_version=(1, 0), init_complete=True))
+
+    def _handle_module_message(self, message: BusMessage) -> bool:
+        if isinstance(message, SimonButtonBlinkMessage):
+            self.blinks.append(message.color)
+            return True
+        return False

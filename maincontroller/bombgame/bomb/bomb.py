@@ -1,34 +1,27 @@
-from enum import Enum
 from time import monotonic
-from asyncio import Lock, Condition, TimeoutError as AsyncTimeoutError, CancelledError, create_task, shield, sleep as async_sleep, wait_for
+from asyncio import Lock, Condition, TimeoutError as AsyncTimeoutError, create_task, shield, sleep as async_sleep, wait_for, Task
+from typing import List, Dict, Optional
 
 from ..bus.bus import BombBus
 from ..casings import Casing
-from ..events import BombErrorLevel, BombError, BombModuleAdded, ModuleStateChange, BombStateChange
+from ..events import BombErrorLevel, BombError, BombModuleAdded, ModuleStateChanged, BombStateChanged, ModuleStriked
 from ..gpio import Gpio, ModuleReadyChange
 from ..bus.messages import BusMessage, ResetMessage, AnnounceMessage, InitCompleteMessage, PingMessage, DefuseBombMessage, ExplodeBombMessage, ModuleId
 from ..modules.registry import MODULE_ID_REGISTRY
-from ..modules.base import ModuleState
+from ..modules.base import ModuleState, Module
 from ..modules.timer import TimerModule
 from ..utils import EventSource
+from .state import BombState
 from .serial import BombSerial
 
-class BombState(Enum):
-    UNINITIALIZED = 0
-    RESETTING = 1
-    INITIALIZING = 2
-    INITIALIZED = 3
-    GAME_STARTING = 4
-    GAME_STARTED = 5
-    GAME_PAUSED = 6
-    GAME_ENDED = 7
-    INITIALIZATION_FAILED = -1
-    DEINITIALIZED = -2
 
 MODULE_RESET_PERIOD = 0.5
 MODULE_ANNOUNCE_TIMEOUT = 1.0
 MODULE_PING_INTERVAL = 1.0
 MODULE_PING_TIMEOUT = 1.0
+
+GAME_START_DELAY = 5
+
 
 class Bomb(EventSource):
     """
@@ -36,6 +29,24 @@ class Bomb(EventSource):
     """
 
     DEFAULT_MAX_STRIKES = 3
+
+    bus: BombBus
+    casing: Casing
+    modules: List[Module]
+    modules_by_bus_id: Dict[ModuleId, Module]
+    modules_by_location: Dict[int, Module]
+    max_strikes: int
+    strikes: int
+    time_left: float
+    timer_speed: float
+    widgets: list  # TODO fix the type
+    serial_number: BombSerial
+    _state: BombState
+    _init_location: Optional[int]
+    _state_lock: Lock
+    _init_cond: Condition
+    _gpio: Gpio
+    _running_tasks: List[Task]
 
     def __init__(self, bus: BombBus, gpio: Gpio, casing: Casing, *, max_strikes: int = DEFAULT_MAX_STRIKES, serial_number: str = None):
         super().__init__()
@@ -55,7 +66,7 @@ class Bomb(EventSource):
         self._init_location = None
         self._state_lock = Lock()
         self._init_cond = Condition(self._state_lock)
-        self._pinger = None
+        self._running_tasks = []
         bus.add_listener(BusMessage, self._receive_message)
         gpio.add_listener(ModuleReadyChange, self._module_ready_change)
 
@@ -95,17 +106,26 @@ class Bomb(EventSource):
         # wait for all modules to initialize
         await self._init_cond.wait_for(lambda: self._state == BombState.INITIALIZED)
         self._state_lock.release()
-        self._pinger = create_task(self._ping_loop())
-        self.trigger(BombStateChange(BombState.INITIALIZED))
+        self.create_task(self._ping_loop())
+        self.trigger(BombStateChanged(BombState.INITIALIZED))
 
     def deinitialize(self):
         if self._state == BombState.DEINITIALIZED:
             raise RuntimeError("Bomb already deinitialized")
-        if self._pinger is not None:
-            self._pinger.cancel()
+        for task in self._running_tasks:
+            task.cancel()
         self.bus.remove_listener(BusMessage, self._receive_message)
         self._gpio.remove_listener(ModuleReadyChange, self._module_ready_change)
         self._state = BombState.DEINITIALIZED
+
+    def create_task(self, task):
+        task = create_task(task)
+        self._running_tasks.append(task)
+        return task
+
+    def cancel_task(self, task):
+        task.cancel()
+        self._running_tasks.remove(task)
 
     def _module_ready_change(self, change: ModuleReadyChange):
         if self._state != BombState.UNINITIALIZED:
@@ -144,6 +164,7 @@ class Bomb(EventSource):
                 self.modules_by_location[self._init_location] = module
                 self.modules.append(module)
                 self.trigger(BombModuleAdded(module))
+                module.add_listener(ModuleStateChanged, self._check_solve)
                 self._init_location = None
                 self._init_cond.notify_all()
                 return
@@ -154,7 +175,7 @@ class Bomb(EventSource):
             module.last_received = monotonic()
             if isinstance(message, InitCompleteMessage) and module.state == ModuleState.INITIALIZATION:
                 module.state = ModuleState.CONFIGURATION
-                self.trigger(ModuleStateChange(module))
+                self.trigger(ModuleStateChanged(module))
                 if self._state == BombState.INITIALIZING and all(module.state == ModuleState.CONFIGURATION for module in self.modules_by_bus_id.values()):
                     self._state = BombState.INITIALIZED
                     self._init_cond.notify_all()
@@ -175,18 +196,43 @@ class Bomb(EventSource):
                     await self.bus.send(PingMessage(module.bus_id))
             await async_sleep(0.1)
 
+    async def start_game(self):
+        """Starts the game with the initial wait phase."""
+        self.create_task(self._start_game_task())
+
+    async def _start_game_task(self):
+        for module in self.modules:
+            await module.send_state()
+        self._state = BombState.GAME_STARTING
+        self.trigger(BombStateChanged(BombState.GAME_STARTING))
+        # TODO: add at least an option to manually do the starting from UI
+        await async_sleep(GAME_START_DELAY)
+        self._state = BombState.GAME_STARTED
+        self.trigger(BombStateChanged(BombState.GAME_STARTED))
+
     async def explode(self):
-        """Sends the explode message to all modules."""
+        """Ends the game by exploding the bomb."""
+        self._state = BombState.EXPLODED
+        self.trigger(BombStateChanged(BombState.EXPLODED))
         await self.bus.send(ExplodeBombMessage(ModuleId.BROADCAST))
+        # TODO: play sounds here; room-scale effects will react to the BombStateChanged event
 
-    async def defuse(self):
-        """Sends the defuse message to all modules."""
-        await self.bus.send(DefuseBombMessage(ModuleId.BROADCAST))
+    async def _check_solve(self, module: Module):
+        if all(module.state == ModuleState.DEFUSED or not module.must_solve for module in self.modules):
+            self._state = BombState.DEFUSED
+            self.trigger(BombStateChanged(BombState.DEFUSED))
+            await self.bus.send(DefuseBombMessage(ModuleId.BROADCAST))
 
-    async def strike(self) -> bool:
-        """Increments the strike count. Returns True if the bomb exploded."""
+    async def strike(self, module: Module) -> bool:
+        """Called by modules to indicate a strike.
+
+        Returns ``True`` if the bomb exploded due to the strike, in which case the module should stop sending messages
+        to the bus.
+        """
         self.strikes += 1
         if self.strikes >= self.max_strikes:
             await self.explode()
             return True
+        self.trigger(ModuleStriked(module))
+        # TODO play strike sound
         return False

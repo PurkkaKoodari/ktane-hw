@@ -5,7 +5,7 @@ from time import monotonic
 from typing import Tuple, List
 
 from ..bus.messages import StrikeModuleMessage, SolveModuleMessage, ModuleId, ErrorMessage, RecoveredErrorMessage
-from ..events import BombError, BombErrorLevel, ModuleStateChange
+from ..events import BombError, BombErrorLevel, ModuleStateChanged
 
 DEFAULT_ERROR_DESCRIPTIONS = {
     0: "The module received an invalid message.",
@@ -24,14 +24,13 @@ class ModuleState(Enum):
 
 
 class Module(ABC):
-    """
-    The base class for modules.
-    """
+    """The base class for modules."""
 
     __slots__ = ("_bomb", "bus_id", "location", "hw_version", "sw_version", "last_received", "last_ping_sent", "state", "errors")
 
     is_needy = False
     is_boss = False
+    must_solve = True
 
     errors: List[Tuple[int, BombError]]
 
@@ -55,7 +54,7 @@ class Module(ABC):
         self.errors.append((message.code, error))
         self._bomb.trigger(error)
 
-    def _describe_error(self, error: ErrorMessage):
+    def _describe_error(self, error: ErrorMessage) -> str:
         try:
             return DEFAULT_ERROR_DESCRIPTIONS[error.code]
         except KeyError:
@@ -63,30 +62,39 @@ class Module(ABC):
 
     @abstractmethod
     def ui_state(self):
+        """Returns a JSON-encodable object that represents the module's state to be passed to the UI."""
         pass
 
     @property
-    def error_level(self):
+    def error_level(self) -> BombErrorLevel:
         return max((error.level for _, error in self.errors), default=BombErrorLevel.NONE)
 
     @abstractmethod
     def generate(self):
+        # TODO: Figure out how this method is going to be used with different kinds of modules.
+        #  For example, we might want to have a generic UI toolkit for modules to define a 'randomize'
+        #  button on the web UI, but also allow manual input of e.g. wire colors
         pass
 
     @abstractmethod
     async def send_state(self):
+        """Called by the bomb to send the state to a module that has been reset (including at game start)."""
         pass
 
     async def defuse(self):
+        """Called by module code to mark the module as defused."""
         self.state = ModuleState.DEFUSED
-        self._bomb.trigger(ModuleStateChange(self))
+        self._bomb.trigger(ModuleStateChanged(self))
         await self._bomb.bus.send(SolveModuleMessage(self.bus_id))
 
     async def strike(self, count=True):
+        """Called by module code to record a strike on the module."""
         if count:
             if await self._bomb.strike():
                 return
             await self._bomb.bus.send(StrikeModuleMessage(self.bus_id))
 
-class NeedyModule(Module): # pylint: disable=abstract-method
+
+class NeedyModule(Module, ABC):
     is_needy = True
+    must_solve = False

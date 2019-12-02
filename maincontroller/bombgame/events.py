@@ -8,7 +8,16 @@ class TimerTick:
     __slots__ = ()
 
 
-class BombStateChange:
+class ModuleStriked:
+    """The event raised when a strike occurs on a module."""
+
+    __slots__ = ("module",)
+
+    def __init__(self, module):
+        self.module = module
+
+
+class BombStateChanged:
     """The event raised when the bomb's state changes."""
 
     __slots__ = ("state",)
@@ -26,8 +35,8 @@ class BombModuleAdded:
         self.module = module
 
 
-class ModuleStateChange:
-    """The event raised when a module's state changes."""
+class ModuleStateChanged:
+    """The event raised when a module's state changes in a way that would require an UI update."""
 
     __slots__ = ("module",)
 

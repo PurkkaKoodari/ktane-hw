@@ -1,13 +1,15 @@
+from __future__ import annotations
 from asyncio import create_task, wait_for, Task
 from typing import Optional, Any, Mapping, ClassVar
 import json
 
 from websockets import serve, WebSocketServerProtocol, ConnectionClosed
 
-from ..bomb.bomb import Bomb, BombState
+from ..bomb.bomb import Bomb
+from bombgame.bomb.state import BombState
 from ..bus.bus import BombBus
 from ..config import BOMB_CASING
-from ..events import BombError, BombModuleAdded, BombStateChange, ModuleStateChange
+from ..events import BombError, BombModuleAdded, BombStateChanged, ModuleStateChanged
 from ..gpio import Gpio
 from ..modules.base import Module
 from ..utils import EventSource, Registry, Ungettable
@@ -259,14 +261,14 @@ class WebInterface(EventSource):
     async def _log_bomb_error(self, error: BombError):
         await self._send_to_client(ErrorMessage(error.level.name, error.location, error.details))
 
-    async def _handle_bomb_state(self, event: BombStateChange):
+    async def _handle_bomb_state(self, event: BombStateChanged):
         if event.state != BombState.DEINITIALIZED:
             await self._send_to_client(StateMessage(event.state.name))
 
     async def _handle_module_add(self, event: BombModuleAdded):
         await self._send_module(event.module)
 
-    async def _handle_module_update(self, event: ModuleStateChange):
+    async def _handle_module_update(self, event: ModuleStateChanged):
         await self._send_to_client(UpdateModuleMessage(
             location=event.module.location,
             state=event.module.state.name,
@@ -277,8 +279,8 @@ class WebInterface(EventSource):
         await self._send_to_client(ResetMessage())
         self._bomb = Bomb(self._bus, self._gpio, BOMB_CASING)
         self._bomb.add_listener(BombModuleAdded, self._handle_module_add)
-        self._bomb.add_listener(BombStateChange, self._handle_bomb_state)
-        self._bomb.add_listener(ModuleStateChange, self._handle_module_update)
+        self._bomb.add_listener(BombStateChanged, self._handle_bomb_state)
+        self._bomb.add_listener(ModuleStateChanged, self._handle_module_update)
         self._bomb.add_listener(BombError, self._log_bomb_error)
         self._bomb_init_task = create_task(self._bomb.initialize())
         await self._bomb_init_task

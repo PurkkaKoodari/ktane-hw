@@ -268,7 +268,7 @@ class MCP23017:
 
         All reads made during the read transaction are cached at the time of the first read to
         the port containing the pin being read. The cache is cleared when ``end_read()`` is called.
-        This is done automatically if ``begin_read()`` is used with a ``with`` statement.
+        This is done automatically if ``begin_read()`` is used as a context manager in a ``with`` statement.
         """
         self._reads = [None, None]
         return self._Reader(self)
@@ -283,7 +283,7 @@ class MCP23017:
         """Starts a write transaction.
 
         All writes made during a write transaction are committed when ``end_write()`` is called.
-        This is done automatically if ``begin_write()`` is used with a ``with`` statement.
+        This is done automatically if ``begin_write()`` is used as a context manager in a ``with`` statement.
         """
         self._check_ongoing_transaction()
         self._writes = self._outputs[:]
@@ -303,7 +303,7 @@ class MCP23017:
 
         All configuration and write actions made during a configuration transaction are committed when
         ``end_configuration()`` is called. This is done automatically if ``begin_configuration()``
-        is used with a ``with`` statement.
+        is used as a context manager in a ``with`` statement.
         """
         self._check_ongoing_transaction()
         self._configuring = True

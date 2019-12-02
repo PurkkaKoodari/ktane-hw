@@ -5,7 +5,7 @@ from typing import List, Dict, Optional
 from ..bus.bus import BombBus
 from ..casings import Casing
 from ..events import BombErrorLevel, BombError, BombModuleAdded, ModuleStateChanged, BombStateChanged, ModuleStriked
-from ..gpio import Gpio, ModuleReadyChange
+from ..gpio import AbstractGpio, ModuleReadyChange
 from ..bus.messages import BusMessage, ResetMessage, AnnounceMessage, InitCompleteMessage, PingMessage, DefuseBombMessage, ExplodeBombMessage, ModuleId
 from ..modules.registry import MODULE_ID_REGISTRY
 from ..modules.base import ModuleState, Module
@@ -45,10 +45,10 @@ class Bomb(EventSource):
     _init_location: Optional[int]
     _state_lock: Lock
     _init_cond: Condition
-    _gpio: Gpio
+    _gpio: AbstractGpio
     _running_tasks: List[Task]
 
-    def __init__(self, bus: BombBus, gpio: Gpio, casing: Casing, *, max_strikes: int = DEFAULT_MAX_STRIKES, serial_number: str = None):
+    def __init__(self, bus: BombBus, gpio: AbstractGpio, casing: Casing, *, max_strikes: int = DEFAULT_MAX_STRIKES, serial_number: str = None):
         super().__init__()
         self.bus = bus
         self._gpio = gpio
@@ -103,10 +103,11 @@ class Bomb(EventSource):
         if not any(isinstance(module, TimerModule) for module in self.modules_by_bus_id.values()):
             self._init_fail("no timer found on bomb")
             return
+        # start pinging modules that have not sent anything in a while
+        self.create_task(self._ping_loop())
         # wait for all modules to initialize
         await self._init_cond.wait_for(lambda: self._state == BombState.INITIALIZED)
         self._state_lock.release()
-        self.create_task(self._ping_loop())
         self.trigger(BombStateChanged(BombState.INITIALIZED))
 
     def deinitialize(self):
@@ -226,8 +227,8 @@ class Bomb(EventSource):
     async def strike(self, module: Module) -> bool:
         """Called by modules to indicate a strike.
 
-        Returns ``True`` if the bomb exploded due to the strike, in which case the module should stop sending messages
-        to the bus.
+        Returns ``True`` if the bomb exploded due to the strike, in which case the module should immediately stop
+        sending messages to the bus.
         """
         self.strikes += 1
         if self.strikes >= self.max_strikes:

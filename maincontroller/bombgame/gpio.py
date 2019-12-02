@@ -1,7 +1,9 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
 from collections import namedtuple
 from logging import getLogger
 from asyncio import Lock, create_task, sleep as async_sleep, wrap_future
+from typing import List
 
 from .casings import Casing
 from .utils import AuxiliaryThreadExecutor, EventSource
@@ -24,7 +26,30 @@ class ModuleReadyChange:
         self.present = present
 
 
-class Gpio(EventSource):
+class AbstractGpio(EventSource, ABC):
+    """An abstract base class for Gpio and MockGpio."""
+
+    def __init__(self):
+        EventSource.__init__(self)
+
+    @abstractmethod
+    async def reset(self) -> None:
+        """Resets all module enable and widget pins to off."""
+
+    @abstractmethod
+    async def check_ready_changes(self) -> List[int]:
+        """Polls for changes in module ready pins and returns the locations of currently connected modules."""
+
+    @abstractmethod
+    async def set_enable(self, location: int, enabled: bool) -> None:
+        """Sets the state of the MODULE_ENABLE signal for a module."""
+
+    @abstractmethod
+    async def set_widget(self, location: int, value: bool) -> None:
+        """Sets the state of a widget pin."""
+
+
+class Gpio(AbstractGpio):
     """A class that manages all the MCP23017 chips in a Casing.
 
     All public methods are asynchronous.
@@ -35,7 +60,7 @@ class Gpio(EventSource):
 
     def __init__(self, casing: Casing):
         """Creates a Gpio object and synchronously initializes the MCP23017 chips."""
-        super().__init__()
+        AbstractGpio.__init__(self)
         getLogger("GPIO").info("Initializing GPIO for %s", casing.__class__.__name__)
         self._mcps = []
         self._modules = []

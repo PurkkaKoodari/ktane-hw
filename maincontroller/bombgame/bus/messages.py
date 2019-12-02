@@ -222,7 +222,7 @@ class AnnounceMessage(BusMessage):
     __slots__ = ("hw_version", "sw_version", "init_complete")
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 hw_version: Tuple[int], sw_version: Tuple[int], init_complete: bool):
+                 hw_version: Tuple[int, int], sw_version: Tuple[int, int], init_complete: bool):
         super().__init__(self.__class__.message_id, module, direction)
         self.hw_version = hw_version
         self.sw_version = sw_version

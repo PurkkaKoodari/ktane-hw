@@ -1,5 +1,4 @@
 EESchema Schematic File Version 4
-LIBS:korttipohja-cache
 EELAYER 30 0
 EELAYER END
 $Descr A3 16535 11693
@@ -15,7 +14,7 @@ Comment3 ""
 Comment4 ""
 $EndDescr
 $Comp
-L MCU_Module:Arduino_Nano_v3.x A1
+L korttipohja-rescue:Arduino_Nano_v3.x-MCU_Module A1
 U 1 1 5D938166
 P 8100 3200
 F 0 "A1" H 8100 2111 50  0000 C CNN

@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name large7segment)(type Legacy)(uri ${KIPRJMOD}/large7segment.lib)(options "")(descr ""))
+)

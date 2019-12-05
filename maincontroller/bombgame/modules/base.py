@@ -91,8 +91,9 @@ class Module(ABC):
         """Called by module code to record a strike on the module."""
         if count:
             if await self._bomb.strike():
-                return
+                return True
             await self._bomb.bus.send(StrikeModuleMessage(self.bus_id))
+            return False
 
 
 class NeedyModule(Module, ABC):

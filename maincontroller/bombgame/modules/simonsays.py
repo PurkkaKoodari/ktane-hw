@@ -6,6 +6,7 @@ import struct
 
 from .base import Module
 from .registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
+from ..audio import register_sound, play_sound, AudioLocation
 from ..bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
 from ..bomb.serial import VOWELS
 from ..bomb.state import BombState
@@ -20,16 +21,16 @@ class SimonColor(IntEnum):
     RED = 4
 
 
-SIMON_BLINK_INTERVAL = 1.0
-SIMON_START_DELAY = 1.0
-SIMON_REPEAT_DELAY = 3.0
+SIMON_BLINK_INTERVAL = 0.6
+SIMON_INITIAL_DELAY = 2.0
+SIMON_REPEAT_DELAY = 5.0
 
 
 @MODULE_ID_REGISTRY.register
 class SimonSaysModule(Module):
     module_id = 5
 
-    __slots__ = ("_sequence", "_length", "_pressed", "_send_task")
+    __slots__ = ("_sequence", "_length", "_pressed", "_send_task", "_playing_sound")
 
     def __init__(self, bomb, bus_id, location, hw_version, sw_version):
         super().__init__(bomb, bus_id, location, hw_version, sw_version)
@@ -37,6 +38,7 @@ class SimonSaysModule(Module):
         self._length = 1
         self._pressed = []
         self._send_task = None
+        self._playing_sound = None
         bomb.bus.add_listener(SimonButtonPressMessage, self._handle_press)
         bomb.bus.add_listener(SimonButtonBlinkMessage, self._handle_blink)
         bomb.add_listener(BombStateChanged, self._handle_bomb_state)
@@ -73,23 +75,29 @@ class SimonSaysModule(Module):
         return dict(zip(blinks, presses))
 
     async def _handle_press(self, event: SimonButtonPressMessage):
+        self._stop_display()
         self._pressed.append(event.color)
-        correct = self._color_map()[self._sequence][self._length - 1]
+        correct = self._color_map()[self._sequence[self._length - 1]]
         if event.color != correct:
-            self._pressed = []
+            self._pressed.clear()
             self._bomb.trigger(ModuleStateChanged(self))
-            await self.strike()
+            if await self.strike():
+                return
+            await self._blink_button(event.color)
             self._restart_display()
         elif self._length == len(self._sequence):
+            await self._blink_button(event.color)
             await self.defuse()
         else:
             self._length += 1
+            self._pressed.clear()
             self._bomb.trigger(ModuleStateChanged(self))
-            self._restart_display()
+            await self._blink_button(event.color)
+            self._restart_display(delay=SIMON_INITIAL_DELAY)
 
     def _handle_bomb_state(self, event: BombStateChanged):
         if event.state == BombState.GAME_STARTED:
-            self._restart_display()
+            self._restart_display(delay=SIMON_INITIAL_DELAY)
         elif event.state in (BombState.GAME_PAUSED, BombState.EXPLODED, BombState.DEFUSED):
             self._stop_display()
 
@@ -98,19 +106,32 @@ class SimonSaysModule(Module):
             self._bomb.cancel_task(self._send_task)
             self._send_task = None
 
-    def _restart_display(self):
+    def _restart_display(self, delay: float = SIMON_REPEAT_DELAY):
         self._stop_display()
-        self._send_task = self._bomb.create_task(self._send_sequence())
+        self._send_task = self._bomb.create_task(self._send_sequence(delay))
 
-    async def _send_sequence(self):
-        await self._bomb.bus.send(SimonButtonBlinkMessage(self.bus_id, color=SimonColor.NONE))
-        await async_sleep(SIMON_START_DELAY)
+    async def _send_sequence(self, delay: float):
+        await async_sleep(delay)
+        if self._pressed:
+            self._pressed.clear()
+            self._bomb.trigger(ModuleStateChanged(self))
         while True:
             for color in self._sequence:
-                await self._bomb.bus.send(SimonButtonBlinkMessage(self.bus_id, color=color))
-                # TODO play sound
+                await self._blink_button(color)
                 await async_sleep(SIMON_BLINK_INTERVAL)
             await async_sleep(SIMON_REPEAT_DELAY)
+
+    async def _blink_button(self, color: SimonColor):
+        await self._bomb.bus.send(SimonButtonBlinkMessage(self.bus_id, color=color))
+        play_sound(SIMON_SOUNDS[color])
+
+
+SIMON_SOUNDS = {
+    SimonColor.RED: register_sound(SimonSaysModule, "simon_red.wav", AudioLocation.BOMB_ONLY),
+    SimonColor.BLUE: register_sound(SimonSaysModule, "simon_blue.wav", AudioLocation.BOMB_ONLY),
+    SimonColor.GREEN: register_sound(SimonSaysModule, "simon_green.wav", AudioLocation.BOMB_ONLY),
+    SimonColor.YELLOW: register_sound(SimonSaysModule, "simon_yellow.wav", AudioLocation.BOMB_ONLY)
+}
 
 
 class SimonColoredMessage(BusMessage):

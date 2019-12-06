@@ -18,6 +18,8 @@ SOUND_FOLDER = join(dirname(dirname(dirname(realpath(__file__)))), "sounds")
 
 ROOM_AUDIO_AVAILABLE = ROOM_SERVER is not None and ROOM_AUDIO_ENABLED
 
+LOGGER = getLogger("Audio")
+
 _pygame_thread = None
 
 def _check_pygame_thread():
@@ -74,18 +76,18 @@ def register_sound(module_class: type, filename: str, location: AudioLocation) -
 
 
 def load_sounds(module_classes):
-    getLogger("Audio").info("Loading sounds for %d module classes", len(module_classes))
+    LOGGER.info("Loading sounds for %d module classes", len(module_classes))
     for module_class in module_classes:
         for sound in SOUND_REGISTRY[module_class]:
             if sound in LOADED_SOUNDS:
                 continue
             if sound.location == AudioLocation.ROOM_ONLY or sound.location == AudioLocation.PREFER_ROOM and ROOM_AUDIO_ENABLED:
-                getLogger("Audio").debug("Skipping load of room-mode sound %s", sound.filename)
+                LOGGER.debug("Skipping load of room-mode sound %s", sound.filename)
                 continue
-            getLogger("Audio").debug("Loading sound %s", sound.filename)
+            LOGGER.debug("Loading sound %s", sound.filename)
             path = join(SOUND_FOLDER, sound.filename)
             LOADED_SOUNDS[sound.filename] = pygame.mixer.Sound(path)
-    getLogger("Audio").info("%d sounds now loaded", len(LOADED_SOUNDS))
+    LOGGER.info("%d sounds now loaded", len(LOADED_SOUNDS))
 
 
 def initialize_local_playback():
@@ -93,7 +95,7 @@ def initialize_local_playback():
     if PLAYBACK_CHANNELS:
         raise RuntimeError("local playback already initialized")
     _pygame_thread = current_thread()
-    getLogger("Audio").info("Initializing local audio playback")
+    LOGGER.info("Initializing local audio playback")
     pygame.mixer.init()
     pygame.mixer.set_num_channels(AUDIO_CHANNELS)
     PLAYBACK_CHANNELS.clear()
@@ -109,7 +111,7 @@ def play_sound(sound: SoundSpec, priority: int = 0) -> Callable[[], None]:
             # TODO play room audio here and return a stop handler
             return lambda: None
         if sound.location == AudioLocation.ROOM_ONLY:
-            getLogger("Audio").debug("Room audio unavailable, skipping room-only sound %s", sound.filename)
+            LOGGER.debug("Room audio unavailable, skipping room-only sound %s", sound.filename)
             return lambda: None
     # try to find a free channel
     channel = next((channel for channel in PLAYBACK_CHANNELS if not channel.channel.get_busy()), None)
@@ -117,12 +119,12 @@ def play_sound(sound: SoundSpec, priority: int = 0) -> Callable[[], None]:
         # find a channel to override: find the lowest-priority channel, with the sound ending soonest
         channel = min(PLAYBACK_CHANNELS, key=lambda ch: (ch.priority, ch.end))
         if channel.priority > priority:
-            getLogger("Audio").warning("Out of channels, not playing priority %d audio %s", priority, sound.filename)
+            LOGGER.warning("Out of channels, not playing priority %d audio %s", priority, sound.filename)
             return lambda: None
-        getLogger("Audio").warning("Out of channels, stopping priority %d audio %s with %s seconds left",
-                                   channel.priority, channel.filename, channel.end - monotonic())
+        LOGGER.warning("Out of channels, stopping priority %d audio %s with %s seconds left",
+                       channel.priority, channel.filename, channel.end - monotonic())
     # play the sound
-    getLogger("Audio").debug("Playing priority %d audio %s", priority, sound.filename)
+    LOGGER.debug("Playing priority %d audio %s", priority, sound.filename)
     return channel.play(sound.filename, priority)
 
 

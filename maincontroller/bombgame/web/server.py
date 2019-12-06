@@ -1,5 +1,6 @@
 from __future__ import annotations
-from asyncio import create_task, wait_for, Task
+from asyncio import create_task, ensure_future, wait_for, Task
+from logging import getLogger
 from typing import Optional, Any, Mapping, ClassVar
 import json
 
@@ -15,6 +16,8 @@ from ..modules.base import Module
 from ..utils import EventSource, Registry, Ungettable
 
 MESSAGE_TYPE_REGISTRY = Registry("message_type")
+
+LOGGER = getLogger("WebUI")
 
 
 class InvalidMessage(Exception):
@@ -207,7 +210,8 @@ class WebInterface(EventSource):
             except ConnectionClosed:
                 pass
 
-    async def _handle_client(self, client: WebSocketServerProtocol, path: str):
+    async def _handle_client(self, client: WebSocketServerProtocol, _: str):
+        LOGGER.info("Client connected from %s", client.remote_address)
         try:
             handshake: LoginMessage = await wait_for(_receive(client), WEB_LOGIN_TIMEOUT)
             if not isinstance(handshake, LoginMessage):
@@ -296,11 +300,13 @@ class WebInterface(EventSource):
     def start(self):
         if self._serve_task is not None:
             raise RuntimeError("web interface already running")
-        self._serve_task = create_task(serve(self._handle_client))
+        LOGGER.info("Starting Web UI")
+        self._serve_task = ensure_future(serve(self._handle_client))
         create_task(self._initialize_bomb())
 
     def stop(self):
         if self._serve_task is None:
             raise RuntimeError("web interface is not running")
+        LOGGER.info("Stopping Web UI")
         self._serve_task.cancel()
         self._deinitialize_bomb()

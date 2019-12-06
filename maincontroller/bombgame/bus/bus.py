@@ -6,12 +6,11 @@ import time
 import can
 
 from .messages import BusMessage
+from ..config import CAN_ERROR_MAX_COUNT, CAN_ERROR_MAX_INTERVAL
 from ..utils import EventSource, AuxiliaryThreadExecutor, FatalError
 
-# if we encounter 10 errors in 15 seconds, raise a fatal error
-# TODO move to a config file
-CAN_ERROR_MAX_INTERVAL = 15
-CAN_ERROR_MAX_COUNT = 10
+LOGGER = getLogger("BombBus")
+
 
 class BombBus(EventSource):
     """The CAN-based bus used for controlling the physical bomb.
@@ -32,6 +31,7 @@ class BombBus(EventSource):
     def start(self):
         if self._receiver is not None:
             raise RuntimeError("bus already started")
+        LOGGER.info("Starting bus receiver")
         self._receive_executor.start()
         self._send_executor.start()
         self._receiver = create_task(self._receive_loop())
@@ -39,6 +39,7 @@ class BombBus(EventSource):
     def stop(self):
         if self._receiver is None:
             raise RuntimeError("bus not started")
+        LOGGER.info("Stopping bus receiver")
         self._receiver.cancel()
         self._receive_executor.shutdown(True)
         self._send_executor.shutdown(True)
@@ -55,11 +56,11 @@ class BombBus(EventSource):
                     message = BusMessage.parse(message)
                 except ValueError as ex:
                     self._handle_bus_error()
-                    getLogger("BombBus").error("Invalid message from CAN: %s", ex)
+                    LOGGER.error("Invalid message from CAN: %s", ex)
                 else:
                     self.trigger(message)
         except can.CanError as ex:
-            getLogger("BombBus").error("I/O error receiving message from CAN: %s", ex, exc_info=True)
+            LOGGER.error("I/O error receiving message from CAN: %s", ex, exc_info=True)
 
     async def send(self, message: BusMessage):
         """Send a message to the bus."""
@@ -70,7 +71,7 @@ class BombBus(EventSource):
             self._can_bus.send(message.serialize())
         except can.CanError as ex:
             self._handle_bus_error()
-            getLogger("BombBus").error("I/O error sending message to CAN: %s", ex, exc_info=True)
+            LOGGER.error("I/O error sending message to CAN: %s", ex, exc_info=True)
 
     def _handle_bus_error(self):
         if time.monotonic() > self._last_can_error + CAN_ERROR_MAX_INTERVAL:

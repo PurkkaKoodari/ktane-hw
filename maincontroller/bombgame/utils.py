@@ -142,11 +142,14 @@ class AuxiliaryThreadExecutor(Executor, AuxiliaryThread):
     def _run(self):
         while self._queue or not self._quit:
             task = self._get_task(process_all=True)
+            if task is None:
+                continue
             func, args, kwargs, future = task
             try:
                 future.set_result(func(*args, **kwargs))
             except Exception as ex: # pylint: disable=broad-except
                 future.set_exception(ex)
+
 
 class FatalError(Exception):
     """A fatal error in a bomb subsystem that causes the game to become unplayable."""

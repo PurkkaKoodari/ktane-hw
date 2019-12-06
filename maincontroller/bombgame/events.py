@@ -66,6 +66,9 @@ class BombError:
         self.level = level
         self.details = details
 
+    def __repr__(self):
+        return f"BombError({self.module}, {self.level}, {self.details})"
+
     @property
     def location(self):
         return None if self.module is None else self.module.location

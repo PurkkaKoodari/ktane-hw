@@ -6,14 +6,11 @@ from asyncio import Lock, create_task, sleep as async_sleep, wrap_future
 from typing import List
 
 from .casings import Casing
+from .config import GPIO_SMBUS_ADDR, GPIO_POLL_INTERVAL, GPIO_INTERRUPT_ENABLED, GPIO_INTERRUPT_PIN
 from .utils import AuxiliaryThreadExecutor, EventSource
 from . import mcp23017
 
-
-GPIO_POLL_INTERVAL = 1.0
-SMBUS_ADDR = 1
-GPIO_INTERRUPT_ENABLED = True
-GPIO_INTERRUPT_PIN = 22  # TODO: check actual pin number
+LOGGER = getLogger("GPIO")
 
 
 class ModuleReadyChange:
@@ -61,7 +58,7 @@ class Gpio(AbstractGpio):
     def __init__(self, casing: Casing):
         """Creates a Gpio object and synchronously initializes the MCP23017 chips."""
         AbstractGpio.__init__(self)
-        getLogger("GPIO").info("Initializing GPIO for %s", casing.__class__.__name__)
+        LOGGER.info("Initializing GPIO for %s", casing.__class__.__name__)
         self._mcps = []
         self._modules = []
         self._widgets = []
@@ -77,8 +74,8 @@ class Gpio(AbstractGpio):
     def _initialize_mcps(self, casing: Casing):
         for spec in casing.gpio_config:
             assert len(spec.ready_pins) == len(spec.enable_pins)
-            getLogger("GPIO").debug("Initializing MCP23017 at SMBus %s address %#x", SMBUS_ADDR, spec.mcp23017_addr)
-            mcp = mcp23017.MCP23017(SMBUS_ADDR, spec.mcp23017_addr)
+            LOGGER.debug("Initializing MCP23017 at SMBus %s address %#x", GPIO_SMBUS_ADDR, spec.mcp23017_addr)
+            mcp = mcp23017.MCP23017(GPIO_SMBUS_ADDR, spec.mcp23017_addr)
             with mcp.begin_configuration():
                 mcp.configure_int_pins(mirror=True)
                 for ready, enable in zip(spec.ready_pins, spec.enable_pins):
@@ -98,7 +95,7 @@ class Gpio(AbstractGpio):
         try:
             import RPi.GPIO as GPIO
         except (ImportError, RuntimeError):
-            getLogger("GPIO").warning("Failed to load RPi.GPIO module. Module ready interrupts will be disabled.")
+            LOGGER.warning("Failed to load RPi.GPIO module. Module ready interrupts will be disabled.")
             return
         GPIO.setmode(GPIO.BOARD)
         GPIO.setup(GPIO_INTERRUPT_PIN, GPIO.IN)

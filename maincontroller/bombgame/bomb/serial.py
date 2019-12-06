@@ -16,8 +16,8 @@ def _generate_serial():
 
 
 class BombSerial(str):
-    def __init__(self, serial: Optional[str] = None):
-        super().__init__(_generate_serial() if serial is None else serial)
+    def __new__(cls, serial: Optional[str] = None):
+        return str.__new__(cls, _generate_serial() if serial is None else serial)
 
     def has(self, chars):
         return any(char in self for char in chars)

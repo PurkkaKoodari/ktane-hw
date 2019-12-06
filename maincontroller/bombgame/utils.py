@@ -26,6 +26,7 @@ class EventSource:
             raise ValueError("listener not found") from None
 
     def trigger(self, event: Any) -> None:
+        getLogger("EventSource").debug("%s raised on %s", event, self)
         for (eventclass, callback, lock) in self.__listeners:
             if isinstance(event, eventclass):
                 if lock is None:
@@ -87,7 +88,7 @@ class Ungettable(metaclass=UngettableMeta):
 
 class AuxiliaryThread(Thread, ABC):
     def __init__(self, *, name, **kwargs):
-        super().__init__(name=name, **kwargs)
+        super().__init__(name=name, daemon=True, **kwargs)
         self.logger = getLogger(self.name)
         self._lock = RLock()
         self._cond = Condition(self._lock)
@@ -122,6 +123,7 @@ class AuxiliaryThread(Thread, ABC):
     @abstractmethod
     def _run(self):
         pass
+
 
 class AuxiliaryThreadExecutor(Executor, AuxiliaryThread):
     def submit(self, func, *args, **kwargs):

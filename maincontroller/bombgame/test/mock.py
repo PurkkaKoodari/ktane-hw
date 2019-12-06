@@ -17,9 +17,8 @@ from ..modules.timer import TimerModule, SetTimerStateMessage
 from ..utils import EventSource
 
 
-def mock_bus() -> BombBus:
-    can_bus = can.Bus(interface="virtual", channel="test_can_bus")
-    return BombBus(can_bus)
+def mock_can_bus() -> can.BusABC:
+    return can.Bus(interface="virtual", channel="test_can_bus")
 
 
 class MockGpioEnableChange:

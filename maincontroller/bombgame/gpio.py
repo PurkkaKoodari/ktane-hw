@@ -23,6 +23,10 @@ class ModuleReadyChange:
         self.location = location
         self.present = present
 
+    def __repr__(self):
+        status = "present" if self.present else "not present"
+        return f"<ModuleReadyChange: location {self.location} is now {status}>"
+
 
 class AbstractGpio(EventSource, ABC):
     """An abstract base class for Gpio and MockGpio."""

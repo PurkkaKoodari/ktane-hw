@@ -114,6 +114,9 @@ class KeypadSetSolutionMessage(BusMessage):
     def _serialize_data(self):
         return b"".join(struct.pack("<B", button) for button in self.sequence)
 
+    def _data_repr(self):
+        return " ".join(button.name for button in self.sequence)
+
 
 @MODULE_MESSAGE_ID_REGISTRY.register
 class KeypadEventMessage(BusMessage):
@@ -134,3 +137,6 @@ class KeypadEventMessage(BusMessage):
 
     def _serialize_data(self):
         return struct.pack("<B", self.correct)
+
+    def _data_repr(self):
+        return "correct" if self.correct else "incorrect"

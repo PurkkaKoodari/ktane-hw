@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import json
-from asyncio import create_task, ensure_future, wait_for, Task
+from asyncio import create_task, wait_for, Task
 from logging import getLogger
 from typing import Optional, Any, Mapping, ClassVar
 
-from websockets import serve, WebSocketServerProtocol, ConnectionClosed
+from websockets import serve, WebSocketServerProtocol, ConnectionClosed, WebSocketServer
 
 from bombgame.bomb.bomb import Bomb
 from bombgame.bomb.state import BombState
 from bombgame.bus.bus import BombBus
-from bombgame.config import BOMB_CASING
+from bombgame.config import BOMB_CASING, WEB_WS_PORT, WEB_UI_VERSION, WEB_PASSWORD, WEB_LOGIN_TIMEOUT
 from bombgame.events import BombError, BombModuleAdded, BombStateChanged, ModuleStateChanged
 from bombgame.gpio import Gpio
 from bombgame.modules.base import Module
@@ -164,12 +164,6 @@ class ErrorMessage(WebInterfaceMessage):
         self.message = message
 
 
-# TODO move to config
-WEB_UI_VERSION = "0.1-a1"
-WEB_PASSWORD = None
-WEB_LOGIN_TIMEOUT = 2
-
-
 async def _invalid_message(client: WebSocketServerProtocol, reason: str = "invalid message", code: int = 1003):
     await client.close(code, reason)
     raise ConnectionClosed(code, reason) from None
@@ -186,9 +180,10 @@ async def _receive(client: WebSocketServerProtocol):
 
 
 class WebInterface(EventSource):
-    __slots__ = ("_bus", "_gpio", "_bomb", "_serve_task", "_client")
+    __slots__ = ("_bus", "_gpio", "_bomb", "_serve_task", "_server", "_client")
 
     _serve_task: Optional[Task]
+    _server: Optional[WebSocketServer]
     _client: Optional[WebSocketServerProtocol]
     _bomb: Optional[Bomb]
     _bomb_init_task: Optional[Task]
@@ -198,6 +193,7 @@ class WebInterface(EventSource):
         self._bus = bus
         self._gpio = gpio
         self._serve_task = None
+        self._server = None
         self._bomb = None
         self._client = None
         self._bomb_init_task = None
@@ -298,16 +294,17 @@ class WebInterface(EventSource):
         if self._bomb:
             self._bomb.deinitialize()
 
-    def start(self):
+    async def start(self):
         if self._serve_task is not None:
             raise RuntimeError("web interface already running")
         LOGGER.info("Starting Web UI")
-        self._serve_task = ensure_future(serve(self._handle_client))
+        self._server = await serve(self._handle_client, port=WEB_WS_PORT)
         create_task(self._initialize_bomb())
 
-    def stop(self):
-        if self._serve_task is None:
+    async def stop(self):
+        if self._server is None:
             raise RuntimeError("web interface is not running")
         LOGGER.info("Stopping Web UI")
-        self._serve_task.cancel()
+        self._server.close()
+        await self._server.wait_closed()
         self._deinitialize_bomb()

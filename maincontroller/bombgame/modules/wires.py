@@ -131,3 +131,6 @@ class WiresCutMessage(BusMessage):
 
     def _serialize_data(self):
         return struct.pack("<B", self.position)
+
+    def _data_repr(self):
+        return f"position {self.position}"

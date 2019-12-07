@@ -152,6 +152,9 @@ class SimonColoredMessage(BusMessage):
     def _serialize_data(self):
         return struct.pack("<B", self.color)
 
+    def _data_repr(self):
+        return self.color.name
+
 
 @MODULE_MESSAGE_ID_REGISTRY.register
 class SimonButtonBlinkMessage(SimonColoredMessage):

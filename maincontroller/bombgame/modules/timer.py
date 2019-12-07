@@ -58,3 +58,6 @@ class SetTimerStateMessage(BusMessage):
 
     def _serialize_data(self):
         return struct.pack("<HHBB", self.secs, self.speed, self.strikes, self.max_strikes)
+
+    def _data_repr(self):
+        return f"{self.secs}s remaining, speed {self.speed}x, {self.strikes}/{self.max_strikes} strikes"

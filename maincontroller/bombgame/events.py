@@ -7,6 +7,9 @@ class TimerTick:
 
     __slots__ = ()
 
+    def __repr__(self):
+        return f"<TimerTick>"
+
 
 class ModuleStriked:
     """The event raised when a strike occurs on a module."""
@@ -15,6 +18,9 @@ class ModuleStriked:
 
     def __init__(self, module):
         self.module = module
+
+    def __repr__(self):
+        return f"<ModuleStriked on {self.module}>"
 
 
 class BombStateChanged:
@@ -25,6 +31,9 @@ class BombStateChanged:
     def __init__(self, state):
         self.state = state
 
+    def __repr__(self):
+        return f"<BombStateChanged to {self.state}>"
+
 
 class BombModuleAdded:
     """The event raised when a module is added to a bomb."""
@@ -34,6 +43,9 @@ class BombModuleAdded:
     def __init__(self, module):
         self.module = module
 
+    def __repr__(self):
+        return f"<BombModuleAdded: {self.module}>"
+
 
 class ModuleStateChanged:
     """The event raised when a module's state changes in a way that would require an UI update."""
@@ -42,6 +54,9 @@ class ModuleStateChanged:
 
     def __init__(self, module):
         self.module = module
+
+    def __repr__(self):
+        return f"<ModuleStateChanged in {self.module}>"
 
 
 class BombErrorLevel(IntEnum):
@@ -67,7 +82,9 @@ class BombError:
         self.details = details
 
     def __repr__(self):
-        return f"BombError({self.module}, {self.level}, {self.details})"
+        if self.module is None:
+            return f"<BombError {self.level.name}: {self.details}>"
+        return f"<BombError {self.level.name} in {self.module}: {self.details}>"
 
     @property
     def location(self):

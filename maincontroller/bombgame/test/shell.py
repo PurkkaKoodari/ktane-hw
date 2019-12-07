@@ -24,8 +24,8 @@ LOGGER = getLogger("BombGameTest")
 
 def main():
     init_logging()
-    LOGGER.info("Starting. Exit cleanly with SIGINT/Ctrl-C")
-    LOGGER.info("In asyncio shell, Ctrl-D, exit() or others cause unclean exit")
+    LOGGER.info("Starting. Stop the game cleanly with SIGINT/Ctrl-C")
+    LOGGER.info("In asyncio shell, Ctrl-D, exit() and others cause unclean exit")
     LOGGER.info("You have the following variables:")
     LOGGER.info("  timer, simon - virtual modules already created for you")
     LOGGER.info("  bus - the BombBus viewed from the virtual module side, gets controller's messages")
@@ -45,8 +45,7 @@ def main():
     async def run_and_cleanup():
         await run_game(controller_side_can, gpio, quit_evt)
         mock_side_bus.stop()
-        LOGGER.info("Exiting")
-        get_running_loop().stop()
+        LOGGER.info("The game has exited. You can now exit with Ctrl-D/exit()")
     create_task(run_and_cleanup())
 
     return {

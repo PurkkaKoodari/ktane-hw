@@ -4,7 +4,7 @@ from collections import deque
 from concurrent.futures import Executor, Future
 from logging import getLogger
 from threading import Thread, RLock, Condition
-from typing import Any, Union, Callable
+from typing import Any, Union, Callable, NamedTuple
 
 
 class EventSource:
@@ -158,3 +158,9 @@ class AuxiliaryThreadExecutor(Executor, AuxiliaryThread):
 
 class FatalError(Exception):
     """A fatal error in a bomb subsystem that causes the game to become unplayable."""
+
+
+class VersionNumber(NamedTuple):
+    """A major/minor version number."""
+    major: int
+    minor: int

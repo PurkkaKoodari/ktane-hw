@@ -3,13 +3,12 @@ from __future__ import annotations
 import struct
 from abc import ABC, abstractmethod
 from enum import IntEnum
-from typing import Tuple
 
 import can
 
 from bombgame.events import BombErrorLevel
 from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
-from bombgame.utils import Registry, Ungettable
+from bombgame.utils import Registry, Ungettable, VersionNumber
 
 MODULEID_TYPE_BITS = 12
 MODULEID_SERIAL_BITS = 10
@@ -46,7 +45,12 @@ class ModuleId:
     def __hash__(self):
         return self.__int__()
 
+    def __repr__(self):
+        return f"ModuleId({self.type}, {self.serial})"
+
     def __str__(self):
+        if self.type == 0:
+            return "broadcast"
         if self.type in MODULE_ID_REGISTRY:
             return f"{MODULE_ID_REGISTRY[self.type].__name__}#{self.serial}"
         return f"{self.type}#{self.serial}"
@@ -166,11 +170,21 @@ class BusMessage(ABC):
 
     @classmethod
     @abstractmethod
-    def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
+    def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes) -> BusMessage:
         pass
 
     @abstractmethod
-    def _serialize_data(self):
+    def _serialize_data(self) -> bytes:
+        pass
+
+    def __repr__(self):
+        data_repr = self._data_repr()
+        data_repr = f": {data_repr}" if data_repr else ""
+        direction = "to" if self.direction == BusMessageDirection.OUT else "from"
+        return f"<{self.__class__.__name__} {direction} {self.module}{data_repr}>"
+
+    @abstractmethod
+    def _data_repr(self) -> str:
         pass
 
 
@@ -186,6 +200,9 @@ class SimpleBusMessage(BusMessage):
 
     def _serialize_data(self):
         return b""
+
+    def _data_repr(self):
+        return ""
 
 
 class StatusMessage(SimpleBusMessage):
@@ -237,7 +254,7 @@ class AnnounceMessage(BusMessage):
     __slots__ = ("hw_version", "sw_version", "init_complete")
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 hw_version: Tuple[int, int], sw_version: Tuple[int, int], init_complete: bool):
+                 hw_version: VersionNumber, sw_version: VersionNumber, init_complete: bool):
         super().__init__(self.__class__.message_id, module, direction)
         self.hw_version = hw_version
         self.sw_version = sw_version
@@ -249,11 +266,16 @@ class AnnounceMessage(BusMessage):
             raise ValueError(f"{cls.__name__} must have 5 bytes of data")
         hw_major, hw_minor, sw_major, sw_minor, flags = struct.unpack("<BBBBB", data)
         init_complete = bool(flags & AnnounceMessage.FLAG_INIT_COMPLETE)
-        return cls(module, direction, hw_version=(hw_major, hw_minor), sw_version=(sw_major, sw_minor), init_complete=init_complete)
+        return cls(module, direction, hw_version=VersionNumber(hw_major, hw_minor),
+                   sw_version=VersionNumber(sw_major, sw_minor), init_complete=init_complete)
 
     def _serialize_data(self):
         flags = AnnounceMessage.FLAG_INIT_COMPLETE * self.init_complete
         return struct.pack("<BBBBB", *self.hw_version, *self.sw_version, flags)
+
+    def _data_repr(self):
+        completeness = "complete" if self.init_complete else "incomplete"
+        return f"hardware {self.hw_version}, software {self.sw_version}.{self.sw_version[1]}, init {completeness}"
 
 
 @MESSAGE_ID_REGISTRY.register

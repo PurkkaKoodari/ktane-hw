@@ -45,7 +45,7 @@ class VanillaCasing(Casing):
     def location(self, index: int) -> str:
         if not 0 <= index < 12:
             raise ValueError("index must be between 0 and 11")
-        return f"{'front' if index < 6 else f'back'} side, row {index // 3 % 2 + 1}, column {index % 3}"
+        return f"{'front' if index < 6 else f'back'} side, row {index // 3 % 2 + 1}, column {index % 3 + 1}"
 
     # TODO add all expanders for full setup
     gpio_config = (

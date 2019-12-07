@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from asyncio import create_task
 from enum import Enum
-from typing import List
+from typing import List, Tuple
 
 import can
 
@@ -14,7 +14,7 @@ from bombgame.gpio import AbstractGpio, ModuleReadyChange
 from bombgame.modules.registry import MODULE_ID_REGISTRY
 from bombgame.modules.simonsays import SimonSaysModule, SimonColor, SimonButtonPressMessage, SimonButtonBlinkMessage
 from bombgame.modules.timer import TimerModule, SetTimerStateMessage
-from bombgame.utils import EventSource
+from bombgame.utils import EventSource, VersionNumber
 
 
 def mock_can_bus() -> can.BusABC:
@@ -131,7 +131,7 @@ class MockPhysicalModule(ABC, EventSource):
         pass
 
     @abstractmethod
-    def _announce(self):
+    def _announce(self) -> Tuple[VersionNumber, VersionNumber, bool]:
         pass
 
     async def _handle_message(self, message: BusMessage):
@@ -184,7 +184,7 @@ class MockPhysicalTimer(MockPhysicalModule):
         self.speed = 0.0
 
     def _announce(self):
-        return (1, 0), (1, 0), True
+        return VersionNumber(1, 0), VersionNumber(1, 0), True
 
     async def _handle_module_message(self, message: BusMessage) -> bool:
         if isinstance(message, SetTimerStateMessage):
@@ -206,8 +206,8 @@ class MockPhysicalSimon(MockPhysicalModule):
     async def press_button(self, color: SimonColor):
         await self._bus.send(SimonButtonPressMessage(self.module_id, BusMessageDirection.IN, color=color))
 
-    async def _announce(self):
-        await self._bus.send(AnnounceMessage(self.module_id, BusMessageDirection.IN, hw_version=(1, 0), sw_version=(1, 0), init_complete=True))
+    def _announce(self):
+        return VersionNumber(1, 0), VersionNumber(1, 0), True
 
     async def _handle_module_message(self, message: BusMessage) -> bool:
         if isinstance(message, SimonButtonBlinkMessage):

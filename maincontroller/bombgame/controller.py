@@ -46,9 +46,9 @@ async def run_game(can_bus, gpio, quit_evt):
     bus.add_listener(FatalError, handle_fatal_error)
     bus.start()
     web_ui = WebInterface(bus, gpio)
-    web_ui.start()
+    await web_ui.start()
     await quit_evt.wait()
-    web_ui.stop()
+    await web_ui.stop()
     bus.stop()
 
 

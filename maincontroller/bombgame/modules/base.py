@@ -7,6 +7,7 @@ from typing import Tuple, List
 
 from bombgame.bus.messages import StrikeModuleMessage, SolveModuleMessage, ModuleId, ErrorMessage, RecoveredErrorMessage
 from bombgame.events import BombError, BombErrorLevel, ModuleStateChanged
+from bombgame.utils import VersionNumber
 
 DEFAULT_ERROR_DESCRIPTIONS = {
     0: "The module received an invalid message.",
@@ -27,7 +28,8 @@ class ModuleState(Enum):
 class Module(ABC):
     """The base class for modules."""
 
-    __slots__ = ("_bomb", "bus_id", "location", "hw_version", "sw_version", "last_received", "last_ping_sent", "state", "errors")
+    __slots__ = ("_bomb", "bus_id", "location", "hw_version", "sw_version", "last_received", "last_ping_sent", "state",
+                 "errors")
 
     is_needy = False
     is_boss = False
@@ -35,7 +37,7 @@ class Module(ABC):
 
     errors: List[Tuple[int, BombError]]
 
-    def __init__(self, bomb, bus_id: ModuleId, location: int, hw_version: Tuple[int], sw_version: Tuple[int]):
+    def __init__(self, bomb, bus_id: ModuleId, location: int, hw_version: VersionNumber, sw_version: VersionNumber):
         self._bomb = bomb
         self.bus_id = bus_id
         self.location = location
@@ -95,6 +97,9 @@ class Module(ABC):
                 return True
             await self._bomb.bus.send(StrikeModuleMessage(self.bus_id))
             return False
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} serial {self.bus_id.serial} hw {self.hw_version} sw {self.sw_version} at {self._bomb.casing.location(self.location)}>"
 
 
 class NeedyModule(Module, ABC):

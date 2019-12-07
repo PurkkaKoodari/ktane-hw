@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name 7x5matrix)(type Legacy)(uri ${KIPRJMOD}/7x5matrix.lib)(options "")(descr ""))
+)

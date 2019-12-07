@@ -1,20 +1,36 @@
-from asyncio import wrap_future, run, get_running_loop
-from code import interact
+"""Provides a way to run the game with a virtual bomb and interact with it from the asyncio shell.
+
+Usage:
+
+1. Start the asyncio shell by typing ``python -m asyncio`` (requires Python 3.8+).
+2. Import the shell: ``from bombgame.test.shell import main``
+3. Run the game and get variables to interact with it: ``locals().update(main())``
+4. Interact with the virtual bomb from the shell
+5. Kill the game task and exit the shell by pressing Ctrl-C
+"""
+
+import sys
+from asyncio import create_task, get_running_loop
+from logging import getLogger
 
 from .mock import MockGpio, MockPhysicalSimon, MockPhysicalTimer, mock_can_bus
 from ..bus.bus import BombBus
-from ..controller import init_game, run_game, handle_fatal_error
-from ..utils import AuxiliaryThreadExecutor, FatalError
+from ..controller import init_game, init_logging, run_game, handle_fatal_error, handle_sigint
+from ..utils import FatalError
+
+LOGGER = getLogger("BombGameTest")
 
 
-async def run_repl(local):
-    repl = AuxiliaryThreadExecutor(name="REPL")
-    repl.start()
-    await wrap_future(repl.submit(lambda: interact(local=local)))
-    repl.shutdown()
-
-
-async def run_test_shell():
+def main():
+    init_logging()
+    LOGGER.info("Starting. Exit cleanly with SIGINT/Ctrl-C")
+    LOGGER.info("In asyncio shell, Ctrl-D, exit() or others cause unclean exit")
+    LOGGER.info("You have the following variables:")
+    LOGGER.info("  timer, simon - virtual modules already created for you")
+    LOGGER.info("  bus - the BombBus viewed from the virtual module side, gets controller's messages")
+    LOGGER.info("  gpio - the MockGpio for the virtual bomb")
+    LOGGER.info("  loop - the running event loop")
+    quit_evt = handle_sigint()
     init_game()
     gpio = MockGpio()
     mock_side_can = mock_can_bus()
@@ -23,18 +39,19 @@ async def run_test_shell():
     mock_side_bus.start()
     timer = MockPhysicalTimer(mock_side_bus, gpio, 0)
     simon = MockPhysicalSimon(mock_side_bus, gpio, 1)
-    local = {
+    controller_side_can = mock_can_bus()
+
+    async def run_and_cleanup():
+        await run_game(controller_side_can, gpio, quit_evt)
+        mock_side_bus.stop()
+        LOGGER.info("Exiting")
+        get_running_loop().stop()
+    create_task(run_and_cleanup())
+
+    return {
         "timer": timer,
         "simon": simon,
         "bus": mock_side_bus,
         "gpio": gpio,
         "loop": get_running_loop()
     }
-    controller_side_can = mock_can_bus()
-    # TODO make this work with Python 3.8's asyncio shell
-    await run_game(controller_side_can, gpio, run_repl(local))
-    mock_side_bus.stop()
-
-
-if __name__ == '__main__':
-    run(run_test_shell())

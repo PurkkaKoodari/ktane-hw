@@ -1,6 +1,6 @@
 from signal import signal, SIGINT
 from asyncio import run, Event
-import logging
+from logging import getLogger, basicConfig as logConfig, DEBUG
 
 import can
 
@@ -9,19 +9,19 @@ from .bus.bus import BombBus
 from .config import BOMB_CASING, CAN_CONFIG
 from .gpio import Gpio
 from .modules import load_modules
-from .utils import FatalError, AuxiliaryThreadExecutor
+from .utils import FatalError
 from .web.server import WebInterface
 
-LOGGER = logging.getLogger("BombGame")
+LOGGER = getLogger("BombGame")
 
 
 def initialize_can():
-    logging.getLogger("CANBus").info("Initializing CAN bus")
+    getLogger("CANBus").info("Initializing CAN bus")
     return can.Bus(**CAN_CONFIG)
 
 
 def init_logging():
-    logging.basicConfig(format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=logging.DEBUG)
+    logConfig(format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=DEBUG)
 
 
 def handle_fatal_error(error):
@@ -36,35 +36,33 @@ def handle_sigint():
 
 
 def init_game():
-    init_logging()
     LOGGER.info("Loading modules")
     load_modules()
     initialize_local_playback()
 
 
-async def wait_for_sigint():
-    quit_evt = handle_sigint()
-    await quit_evt.wait()
-
-
-async def run_game(can_bus, gpio, console_interface):
+async def run_game(can_bus, gpio, quit_evt):
     bus = BombBus(can_bus)
     bus.add_listener(FatalError, handle_fatal_error)
     bus.start()
     web_ui = WebInterface(bus, gpio)
     web_ui.start()
-    await console_interface
+    await quit_evt.wait()
     web_ui.stop()
     bus.stop()
 
 
 async def main():
+    init_logging()
+    LOGGER.info("Starting. Exit cleanly with SIGINT/Ctrl-C")
+    quit_evt = handle_sigint()
     init_game()
     can_bus = initialize_can()
     gpio = Gpio(BOMB_CASING)
     gpio.start()
-    await run_game(can_bus, gpio, wait_for_sigint())
+    await run_game(can_bus, gpio, quit_evt)
     gpio.stop()
+    LOGGER.info("Exiting")
 
 if __name__ == "__main__":
     run(main())

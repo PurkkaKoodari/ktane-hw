@@ -9,14 +9,15 @@ Usage:
 5. Kill the game task and exit the shell by pressing Ctrl-C
 """
 
-import sys
+from __future__ import annotations
+
 from asyncio import create_task, get_running_loop
 from logging import getLogger
 
-from .mock import MockGpio, MockPhysicalSimon, MockPhysicalTimer, mock_can_bus
-from ..bus.bus import BombBus
-from ..controller import init_game, init_logging, run_game, handle_fatal_error, handle_sigint
-from ..utils import FatalError
+from bombgame.bus.bus import BombBus
+from bombgame.controller import init_game, init_logging, run_game, handle_fatal_error, handle_sigint
+from bombgame.test.mock import MockGpio, MockPhysicalSimon, MockPhysicalTimer, mock_can_bus
+from bombgame.utils import FatalError
 
 LOGGER = getLogger("BombGameTest")
 

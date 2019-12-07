@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from enum import Enum
 from logging import getLogger
 from os.path import dirname, realpath, join, exists
@@ -8,7 +9,7 @@ from typing import NamedTuple, Dict, List, Callable
 
 import pygame
 
-from .config import ROOM_SERVER, ROOM_AUDIO_ENABLED, AUDIO_CHANNELS
+from bombgame.config import ROOM_SERVER, ROOM_AUDIO_ENABLED, AUDIO_CHANNELS
 
 SOUND_REGISTRY: Dict[type, List[SoundSpec]] = {}
 LOADED_SOUNDS: Dict[str, pygame.mixer.Sound] = {}
@@ -21,6 +22,7 @@ ROOM_AUDIO_AVAILABLE = ROOM_SERVER is not None and ROOM_AUDIO_ENABLED
 LOGGER = getLogger("Audio")
 
 _pygame_thread = None
+
 
 def _check_pygame_thread():
     if current_thread() != _pygame_thread:

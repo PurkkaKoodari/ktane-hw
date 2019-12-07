@@ -5,16 +5,16 @@ from typing import List
 
 import can
 
-from ..bus.bus import BombBus
-from ..bus.messages import (ModuleId, BusMessageDirection, BusMessage, AnnounceMessage, ResetMessage,
-                            InitCompleteMessage, PingMessage, LaunchGameMessage, StartTimerMessage, ExplodeBombMessage,
-                            DefuseBombMessage, StrikeModuleMessage, SolveModuleMessage, NeedyActivateMessage,
-                            NeedyDeactivateMessage)
-from ..gpio import AbstractGpio, ModuleReadyChange
-from ..modules.registry import MODULE_ID_REGISTRY
-from ..modules.simonsays import SimonSaysModule, SimonColor, SimonButtonPressMessage, SimonButtonBlinkMessage
-from ..modules.timer import TimerModule, SetTimerStateMessage
-from ..utils import EventSource
+from bombgame.bus.bus import BombBus
+from bombgame.bus.messages import (ModuleId, BusMessageDirection, BusMessage, AnnounceMessage, ResetMessage,
+                                   InitCompleteMessage, PingMessage, LaunchGameMessage, StartTimerMessage,
+                                   ExplodeBombMessage, DefuseBombMessage, StrikeModuleMessage, SolveModuleMessage,
+                                   NeedyActivateMessage, NeedyDeactivateMessage)
+from bombgame.gpio import AbstractGpio, ModuleReadyChange
+from bombgame.modules.registry import MODULE_ID_REGISTRY
+from bombgame.modules.simonsays import SimonSaysModule, SimonColor, SimonButtonPressMessage, SimonButtonBlinkMessage
+from bombgame.modules.timer import TimerModule, SetTimerStateMessage
+from bombgame.utils import EventSource
 
 
 def mock_can_bus() -> can.BusABC:
@@ -53,8 +53,8 @@ class MockGpio(AbstractGpio):
         values = self._enable_pins.copy()
         self._enable_pins.clear()
         self._widget_pins.clear()
-        for location, value in self._enable_pins.items():
-            if value:
+        for location, enabled in values.items():
+            if enabled:
                 self.trigger(MockGpioEnableChange(location, False))
 
     async def check_ready_changes(self) -> List[int]:

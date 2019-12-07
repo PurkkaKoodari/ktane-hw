@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
+from asyncio import get_event_loop, create_task, iscoroutinefunction, Lock as AsyncLock
 from collections import deque
 from concurrent.futures import Executor, Future
 from logging import getLogger
-from typing import Any, Union, Callable
 from threading import Thread, RLock, Condition
-from asyncio import get_event_loop, create_task, iscoroutinefunction, Lock as AsyncLock
+from typing import Any, Union, Callable
 
 
 class EventSource:
@@ -79,12 +79,15 @@ class Registry(dict):
             raise ValueError(f"id {id_} already present in registry")
         self[id_] = class_
 
+
 class UngettableMeta(type):
     def __get__(cls, _1, _2):
         raise NotImplementedError
 
+
 class Ungettable(metaclass=UngettableMeta):
     pass
+
 
 class AuxiliaryThread(Thread, ABC):
     def __init__(self, *, name, **kwargs):

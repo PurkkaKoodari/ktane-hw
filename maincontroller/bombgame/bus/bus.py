@@ -1,13 +1,14 @@
 from __future__ import annotations
-from logging import getLogger
-from asyncio import create_task, wrap_future
+
 import time
+from asyncio import create_task, wrap_future
+from logging import getLogger
 
 import can
 
-from .messages import BusMessage
-from ..config import CAN_ERROR_MAX_COUNT, CAN_ERROR_MAX_INTERVAL
-from ..utils import EventSource, AuxiliaryThreadExecutor, FatalError
+from bombgame.bus.messages import BusMessage
+from bombgame.config import CAN_ERROR_MAX_COUNT, CAN_ERROR_MAX_INTERVAL
+from bombgame.utils import EventSource, AuxiliaryThreadExecutor, FatalError
 
 LOGGER = getLogger("BombBus")
 

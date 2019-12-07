@@ -1,11 +1,13 @@
 from __future__ import annotations
+
+import struct
 from enum import IntEnum
 from random import choice, randint, sample
-import struct
 
-from .base import Module
-from .registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
-from ..bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
+from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
+from bombgame.modules.base import Module
+from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
+
 
 class WireColor(IntEnum):
     RED = 0
@@ -13,6 +15,7 @@ class WireColor(IntEnum):
     YELLOW = 2
     BLACK = 3
     WHITE = 4
+
 
 def _nth(n, rule):
     def matcher(wires):
@@ -23,11 +26,14 @@ def _nth(n, rule):
         return matches[n]
     return matcher
 
+
 def _nth_wire(n):
     return _nth(n, lambda wire: wire is not None)
 
+
 def _nth_colored(n, color):
     return _nth(n, lambda wire: wire == color)
+
 
 RULES = {
     3: [
@@ -56,6 +62,7 @@ RULES = {
         (lambda *_: True, _nth_wire(3))
     ]
 }
+
 
 @MODULE_ID_REGISTRY.register
 class WiresModule(Module):
@@ -100,6 +107,7 @@ class WiresModule(Module):
             await self.defuse()
         else:
             await self.strike()
+
 
 @MODULE_MESSAGE_ID_REGISTRY.register
 class WiresCutMessage(BusMessage):

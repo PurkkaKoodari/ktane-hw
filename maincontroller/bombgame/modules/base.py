@@ -1,11 +1,12 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from enum import Enum
 from time import monotonic
 from typing import Tuple, List
 
-from ..bus.messages import StrikeModuleMessage, SolveModuleMessage, ModuleId, ErrorMessage, RecoveredErrorMessage
-from ..events import BombError, BombErrorLevel, ModuleStateChanged
+from bombgame.bus.messages import StrikeModuleMessage, SolveModuleMessage, ModuleId, ErrorMessage, RecoveredErrorMessage
+from bombgame.events import BombError, BombErrorLevel, ModuleStateChanged
 
 DEFAULT_ERROR_DESCRIPTIONS = {
     0: "The module received an invalid message.",

@@ -1,4 +1,4 @@
-from .casings import VanillaCasing
+from bombgame.casings import VanillaCasing
 
 BOMB_CASING = VanillaCasing()
 

@@ -1,16 +1,16 @@
-from signal import signal, SIGINT
 from asyncio import run, Event
 from logging import getLogger, basicConfig as logConfig, DEBUG
+from signal import signal, SIGINT
 
 import can
 
-from .audio import initialize_local_playback
-from .bus.bus import BombBus
-from .config import BOMB_CASING, CAN_CONFIG
-from .gpio import Gpio
-from .modules import load_modules
-from .utils import FatalError
-from .web.server import WebInterface
+from bombgame.audio import initialize_local_playback
+from bombgame.bus.bus import BombBus
+from bombgame.config import BOMB_CASING, CAN_CONFIG
+from bombgame.gpio import Gpio
+from bombgame.modules import load_modules
+from bombgame.utils import FatalError
+from bombgame.web.server import WebInterface
 
 LOGGER = getLogger("BombGame")
 

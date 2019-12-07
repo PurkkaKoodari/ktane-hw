@@ -1,9 +1,9 @@
 import struct
 
-from .base import Module
-from .registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
-from ..bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
-from ..events import TimerTick, ModuleStriked
+from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
+from bombgame.events import TimerTick, ModuleStriked
+from bombgame.modules.base import Module
+from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
 
 
 @MODULE_ID_REGISTRY.register
@@ -53,7 +53,7 @@ class SetTimerStateMessage(BusMessage):
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
         if len(data) != 6:
             raise ValueError(f"{cls.__name__} must have 6 bytes of data")
-        secs, speed, strikes, max_strikes = struct.unpack("<HHBB")
+        secs, speed, strikes, max_strikes = struct.unpack("<HHBB", data)
         return cls(module, direction, time_left=secs, speed=speed / 256, strikes=strikes, max_strikes=max_strikes)
 
     def _serialize_data(self):

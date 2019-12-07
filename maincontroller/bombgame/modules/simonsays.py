@@ -1,16 +1,17 @@
 from __future__ import annotations
+
+import struct
 from asyncio import sleep as async_sleep
 from enum import IntEnum
 from random import randint, choice
-import struct
 
-from .base import Module
-from .registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
-from ..audio import register_sound, play_sound, AudioLocation
-from ..bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
-from ..bomb.serial import VOWELS
-from ..bomb.state import BombState
-from ..events import ModuleStateChanged, BombStateChanged
+from bombgame.audio import register_sound, play_sound, AudioLocation
+from bombgame.bomb.serial import VOWELS
+from bombgame.bomb.state import BombState
+from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
+from bombgame.events import ModuleStateChanged, BombStateChanged
+from bombgame.modules.base import Module
+from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
 
 
 class SimonColor(IntEnum):
@@ -40,7 +41,6 @@ class SimonSaysModule(Module):
         self._send_task = None
         self._playing_sound = None
         bomb.bus.add_listener(SimonButtonPressMessage, self._handle_press)
-        bomb.bus.add_listener(SimonButtonBlinkMessage, self._handle_blink)
         bomb.add_listener(BombStateChanged, self._handle_bomb_state)
 
     def generate(self):

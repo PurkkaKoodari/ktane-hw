@@ -1,12 +1,14 @@
 from __future__ import annotations
+
+import struct
 from enum import IntEnum
 from random import sample
 from typing import Sequence
-import struct
 
-from .base import Module
-from .registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
-from ..bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
+from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
+from bombgame.modules.base import Module
+from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
+
 
 class KeypadButton(IntEnum):
     TOP_LEFT = 0
@@ -14,34 +16,36 @@ class KeypadButton(IntEnum):
     BOTTOM_LEFT = 2
     BOTTOM_RIGHT = 3
 
+
 class KeypadSymbol(IntEnum):
-    COPYRIGHT = 0 # ©
-    PILCROW = 1 # ¶
-    QUESTION = 2 # ¿
-    AE = 3 # æ
-    LAMBDA = 4 # ƛ
-    PSI = 5 # Ψ
-    OMEGA = 6 # Ω
-    KAI = 7 # ϗ
-    ARCHAIC_KOPPA = 8 # Ϙ
-    KOPPA = 9 # Ϟ
-    SHIMA = 10 # Ϭ
-    C = 11 # Ͼ
-    REVERSE_C = 12 # Ͽ
-    YAT = 13 # Ѣ
-    LITTLE_YUS = 14 # Ѧ
-    IOTIFIED_YUS = 15 # Ѭ
-    KSI = 16 # Ѯ
-    OMEGA_TITLO = 17 # Ѽ
-    THOUSANDS = 18 # ҂
-    I_TAIL = 19 # Ҋ
-    ZHE = 20 # Җ
+    COPYRIGHT = 0  # ©
+    PILCROW = 1  # ¶
+    QUESTION = 2  # ¿
+    AE = 3  # æ
+    LAMBDA = 4  # ƛ
+    PSI = 5  # Ψ
+    OMEGA = 6  # Ω
+    KAI = 7  # ϗ
+    ARCHAIC_KOPPA = 8  # Ϙ
+    KOPPA = 9  # Ϟ
+    SHIMA = 10  # Ϭ
+    C = 11  # Ͼ
+    REVERSE_C = 12  # Ͽ
+    YAT = 13  # Ѣ
+    LITTLE_YUS = 14  # Ѧ
+    IOTIFIED_YUS = 15  # Ѭ
+    KSI = 16  # Ѯ
+    OMEGA_TITLO = 17  # Ѽ
+    THOUSANDS = 18  # ҂
+    I_TAIL = 19  # Ҋ
+    ZHE = 20  # Җ
     HA = 21 # Ҩ
-    E_DIAERESIS = 22 # Ӭ
-    KOMI_DZJE = 23 # Ԇ
-    TEH = 24 # ټ
-    BLACK_STAR = 25 # ★
-    WHITE_STAR = 26 # ☆
+    E_DIAERESIS = 22  # Ӭ
+    KOMI_DZJE = 23  # Ԇ
+    TEH = 24  # ټ
+    BLACK_STAR = 25  # ★
+    WHITE_STAR = 26  # ☆
+
 
 KEYPAD_COLUMNS = [
     [KeypadSymbol.ARCHAIC_KOPPA, KeypadSymbol.LITTLE_YUS, KeypadSymbol.LAMBDA, KeypadSymbol.KOPPA, KeypadSymbol.IOTIFIED_YUS, KeypadSymbol.KAI, KeypadSymbol.REVERSE_C],
@@ -51,6 +55,7 @@ KEYPAD_COLUMNS = [
     [KeypadSymbol.PSI, KeypadSymbol.TEH, KeypadSymbol.YAT, KeypadSymbol.C, KeypadSymbol.PILCROW, KeypadSymbol.KSI, KeypadSymbol.BLACK_STAR],
     [KeypadSymbol.SHIMA, KeypadSymbol.E_DIAERESIS, KeypadSymbol.THOUSANDS, KeypadSymbol.AE, KeypadSymbol.PSI, KeypadSymbol.I_TAIL, KeypadSymbol.OMEGA]
 ]
+
 
 @MODULE_ID_REGISTRY.register
 class KeypadModule(Module):
@@ -87,6 +92,7 @@ class KeypadModule(Module):
         else:
             await self.strike()
 
+
 @MODULE_MESSAGE_ID_REGISTRY.register
 class KeypadSetSolutionMessage(BusMessage):
     message_id = (KeypadModule, BusMessageId.MODULE_SPECIFIC_0)
@@ -107,6 +113,7 @@ class KeypadSetSolutionMessage(BusMessage):
 
     def _serialize_data(self):
         return b"".join(struct.pack("<B", button) for button in self.sequence)
+
 
 @MODULE_MESSAGE_ID_REGISTRY.register
 class KeypadEventMessage(BusMessage):

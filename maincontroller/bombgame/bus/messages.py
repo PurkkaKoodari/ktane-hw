@@ -1,19 +1,21 @@
 from __future__ import annotations
-from abc import ABC, abstractclassmethod, abstractmethod
+
+import struct
+from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import Tuple
-import struct
 
 import can
 
-from ..events import BombErrorLevel
-from ..modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
-from ..utils import Registry, Ungettable
+from bombgame.events import BombErrorLevel
+from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
+from bombgame.utils import Registry, Ungettable
 
 MODULEID_TYPE_BITS = 12
 MODULEID_SERIAL_BITS = 10
 MODULEID_TYPE_MAX = (1 << MODULEID_TYPE_BITS) - 1
 MODULEID_SERIAL_MAX = (1 << MODULEID_SERIAL_BITS) - 1
+
 
 class ModuleId:
     """
@@ -49,7 +51,9 @@ class ModuleId:
             return f"{MODULE_ID_REGISTRY[self.type].__name__}#{self.serial}"
         return f"{self.type}#{self.serial}"
 
+
 ModuleId.BROADCAST = ModuleId(0, 0)
+
 
 class BusMessageId(IntEnum):
     RESET = 0x00
@@ -85,9 +89,11 @@ class BusMessageId(IntEnum):
     MODULE_SPECIFIC_E = 0x3E
     MODULE_SPECIFIC_F = 0x3F
 
+
 class BusMessageDirection(IntEnum):
     OUT = 0
     IN = 1
+
 
 MESSAGE_DIRECTION_BITS = 1
 MESSAGE_MODULE_TYPE_BITS = 12
@@ -105,6 +111,7 @@ MESSAGE_MODULE_SERIAL_MASK = ((1 << MESSAGE_MODULE_SERIAL_BITS) - 1) << MESSAGE_
 MESSAGE_ID_MASK = ((1 << MESSAGE_ID_BITS) - 1) << MESSAGE_ID_OFFSET
 
 MESSAGE_ID_REGISTRY = Registry("message_id")
+
 
 class BusMessage(ABC):
     __slots__ = ("id", "module", "direction")
@@ -157,13 +164,15 @@ class BusMessage(ABC):
         data = self._serialize_data()
         return can.Message(arbitration_id=arbitration_id, is_extended_id=True, data=data, check=True)
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
         pass
 
     @abstractmethod
     def _serialize_data(self):
         pass
+
 
 class SimpleBusMessage(BusMessage):
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT):
@@ -178,14 +187,18 @@ class SimpleBusMessage(BusMessage):
     def _serialize_data(self):
         return b""
 
+
 class StatusMessage(SimpleBusMessage):
     pass
+
 
 class BombStatusMessage(StatusMessage):
     pass
 
+
 class ModuleStatusMessage(StatusMessage):
     pass
+
 
 class ErrorMessage(StatusMessage):
     __slots__ = ("code", "details")
@@ -209,9 +222,11 @@ class ErrorMessage(StatusMessage):
     def _serialize_data(self):
         return struct.pack("<B", self.code) + self.details
 
+
 @MESSAGE_ID_REGISTRY.register
 class ResetMessage(SimpleBusMessage):
     message_id = BusMessageId.RESET
+
 
 @MESSAGE_ID_REGISTRY.register
 class AnnounceMessage(BusMessage):
@@ -240,60 +255,74 @@ class AnnounceMessage(BusMessage):
         flags = AnnounceMessage.FLAG_INIT_COMPLETE * self.init_complete
         return struct.pack("<BBBBB", *self.hw_version, *self.sw_version, flags)
 
+
 @MESSAGE_ID_REGISTRY.register
 class InitCompleteMessage(SimpleBusMessage):
     message_id = BusMessageId.INIT_COMPLETE
+
 
 @MESSAGE_ID_REGISTRY.register
 class PingMessage(SimpleBusMessage):
     message_id = BusMessageId.PING
 
+
 @MESSAGE_ID_REGISTRY.register
 class LaunchGameMessage(BombStatusMessage):
     message_id = BusMessageId.LAUNCH_GAME
+
 
 @MESSAGE_ID_REGISTRY.register
 class StartTimerMessage(BombStatusMessage):
     message_id = BusMessageId.START_TIMER
 
+
 @MESSAGE_ID_REGISTRY.register
 class ExplodeBombMessage(BombStatusMessage):
     message_id = BusMessageId.EXPLODE
+
 
 @MESSAGE_ID_REGISTRY.register
 class DefuseBombMessage(BombStatusMessage):
     message_id = BusMessageId.DEFUSE
 
+
 @MESSAGE_ID_REGISTRY.register
 class StrikeModuleMessage(ModuleStatusMessage):
     message_id = BusMessageId.STRIKE
+
 
 @MESSAGE_ID_REGISTRY.register
 class SolveModuleMessage(ModuleStatusMessage):
     message_id = BusMessageId.SOLVE
 
+
 @MESSAGE_ID_REGISTRY.register
 class NeedyActivateMessage(ModuleStatusMessage):
     message_id = BusMessageId.NEEDY_ACTIVATE
 
+
 @MESSAGE_ID_REGISTRY.register
 class NeedyDeactivateMessage(ModuleStatusMessage):
     message_id = BusMessageId.NEEDY_DEACTIVATE
+
 
 @MESSAGE_ID_REGISTRY.register
 class RecoverableErrorMessage(ErrorMessage):
     message_id = BusMessageId.RECOVERABLE_ERROR
     error_level = BombErrorLevel.RECOVERABLE
 
+
 @MESSAGE_ID_REGISTRY.register
 class RecoveredErrorMessage(ErrorMessage):
     message_id = BusMessageId.RECOVERED_ERROR
     error_level = BombErrorLevel.RECOVERED
 
+
 @MESSAGE_ID_REGISTRY.register
 class MinorUnrecoverableErrorMessage(ErrorMessage):
     message_id = BusMessageId.MINOR_UNRECOVERABLE_ERROR
     error_level = BombErrorLevel.MINOR
+
 
 @MESSAGE_ID_REGISTRY.register
 class MajorUnrecoverableErrorMessage(ErrorMessage):

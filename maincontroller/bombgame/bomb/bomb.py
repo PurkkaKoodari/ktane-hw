@@ -1,19 +1,21 @@
+from asyncio import (Lock, Condition, TimeoutError as AsyncTimeoutError, create_task, shield, sleep as async_sleep,
+                     wait_for, Task)
 from time import monotonic
-from asyncio import Lock, Condition, TimeoutError as AsyncTimeoutError, create_task, shield, sleep as async_sleep, wait_for, Task
 from typing import List, Dict, Optional
 
-from ..bus.bus import BombBus
-from ..casings import Casing
-from ..events import BombErrorLevel, BombError, BombModuleAdded, ModuleStateChanged, BombStateChanged, ModuleStriked
-from ..gpio import AbstractGpio, ModuleReadyChange
-from ..bus.messages import BusMessage, ResetMessage, AnnounceMessage, InitCompleteMessage, PingMessage, DefuseBombMessage, ExplodeBombMessage, ModuleId
-from ..modules.registry import MODULE_ID_REGISTRY
-from ..modules.base import ModuleState, Module
-from ..modules.timer import TimerModule
-from ..utils import EventSource
-from .state import BombState
-from .serial import BombSerial
-
+from bombgame.bomb.serial import BombSerial
+from bombgame.bomb.state import BombState
+from bombgame.bus.bus import BombBus
+from bombgame.bus.messages import (BusMessage, ResetMessage, AnnounceMessage, InitCompleteMessage, PingMessage,
+                                   DefuseBombMessage, ExplodeBombMessage, ModuleId)
+from bombgame.casings import Casing
+from bombgame.events import (BombErrorLevel, BombError, BombModuleAdded, ModuleStateChanged, BombStateChanged,
+                             ModuleStriked)
+from bombgame.gpio import AbstractGpio, ModuleReadyChange
+from bombgame.modules.base import ModuleState, Module
+from bombgame.modules.registry import MODULE_ID_REGISTRY
+from bombgame.modules.timer import TimerModule
+from bombgame.utils import EventSource
 
 MODULE_RESET_PERIOD = 0.5
 MODULE_ANNOUNCE_TIMEOUT = 1.0
@@ -94,7 +96,7 @@ class Bomb(EventSource):
             # initialize a module
             await self._gpio.set_enable(location, True)
             try:
-                await wait_for(shield(self._init_cond.wait_for(lambda: self.modules_by_location[location] is not None)), MODULE_ANNOUNCE_TIMEOUT) # pylint: disable=cell-var-from-loop
+                await wait_for(shield(self._init_cond.wait_for(lambda: self.modules_by_location[location] is not None)), MODULE_ANNOUNCE_TIMEOUT)  # pylint: disable=cell-var-from-loop
             except AsyncTimeoutError:
                 self._init_fail(f"module at {self.casing.location(location)} did not announce in time")
                 return
@@ -218,7 +220,7 @@ class Bomb(EventSource):
         await self.bus.send(ExplodeBombMessage(ModuleId.BROADCAST))
         # TODO: play sounds here; room-scale effects will react to the BombStateChanged event
 
-    async def _check_solve(self, module: Module):
+    async def _check_solve(self, _: ModuleStateChanged):
         if all(module.state == ModuleState.DEFUSED or not module.must_solve for module in self.modules):
             self._state = BombState.DEFUSED
             self.trigger(BombStateChanged(BombState.DEFUSED))

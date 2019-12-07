@@ -1,19 +1,20 @@
 from __future__ import annotations
+
+import json
 from asyncio import create_task, ensure_future, wait_for, Task
 from logging import getLogger
 from typing import Optional, Any, Mapping, ClassVar
-import json
 
 from websockets import serve, WebSocketServerProtocol, ConnectionClosed
 
-from ..bomb.bomb import Bomb
+from bombgame.bomb.bomb import Bomb
 from bombgame.bomb.state import BombState
-from ..bus.bus import BombBus
-from ..config import BOMB_CASING
-from ..events import BombError, BombModuleAdded, BombStateChanged, ModuleStateChanged
-from ..gpio import Gpio
-from ..modules.base import Module
-from ..utils import EventSource, Registry, Ungettable
+from bombgame.bus.bus import BombBus
+from bombgame.config import BOMB_CASING
+from bombgame.events import BombError, BombModuleAdded, BombStateChanged, ModuleStateChanged
+from bombgame.gpio import Gpio
+from bombgame.modules.base import Module
+from bombgame.utils import EventSource, Registry, Ungettable
 
 MESSAGE_TYPE_REGISTRY = Registry("message_type")
 

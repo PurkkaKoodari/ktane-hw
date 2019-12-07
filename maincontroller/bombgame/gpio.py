@@ -1,14 +1,15 @@
 from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from asyncio import Lock, create_task, sleep as async_sleep, wrap_future
 from collections import namedtuple
 from logging import getLogger
-from asyncio import Lock, create_task, sleep as async_sleep, wrap_future
 from typing import List
 
-from .casings import Casing
-from .config import GPIO_SMBUS_ADDR, GPIO_POLL_INTERVAL, GPIO_INTERRUPT_ENABLED, GPIO_INTERRUPT_PIN
-from .utils import AuxiliaryThreadExecutor, EventSource
-from . import mcp23017
+from bombgame import mcp23017
+from bombgame.casings import Casing
+from bombgame.config import GPIO_SMBUS_ADDR, GPIO_POLL_INTERVAL, GPIO_INTERRUPT_ENABLED, GPIO_INTERRUPT_PIN
+from bombgame.utils import AuxiliaryThreadExecutor, EventSource
 
 LOGGER = getLogger("GPIO")
 

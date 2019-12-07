@@ -26,7 +26,7 @@ class TimerModule(Module):
         return None
 
     async def _update_timer(self, _):
-        await self._bomb.bus.send(SetTimerStateMessage(
+        await self._bomb.send(SetTimerStateMessage(
             self.bus_id,
             time_left=self._bomb.time_left,
             speed=self._bomb.timer_speed,

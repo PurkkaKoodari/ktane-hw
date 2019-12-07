@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from asyncio import get_event_loop, create_task, iscoroutinefunction, Lock as AsyncLock
+from asyncio import get_running_loop, iscoroutinefunction, Lock as AsyncLock, run_coroutine_threadsafe, CancelledError
 from collections import deque
 from concurrent.futures import Executor, Future
 from logging import getLogger
 from threading import Thread, RLock, Condition
-from typing import Any, Union, Callable, NamedTuple
+from typing import Any, Union, Callable, NamedTuple, Awaitable
 
 
 class EventSource:
@@ -12,6 +12,7 @@ class EventSource:
 
     def __init__(self):
         self.__listeners = []
+        self.__loop = get_running_loop()
 
     def add_listener(self, eventclass: type, callback: Callable, reentrant: bool = False) -> None:
         lock = None if reentrant else AsyncLock()
@@ -29,21 +30,20 @@ class EventSource:
         getLogger("EventSource").debug("%s raised on %s", event, self)
         for (eventclass, callback, lock) in self.__listeners:
             if isinstance(event, eventclass):
-                if lock is None:
-                    if iscoroutinefunction(callback):
-                        create_task(callback(event))
-                    else:
-                        get_event_loop().call_soon(callback, event)
-                else:
-                    create_task(_call_event(callback, lock, event))
+                run_coroutine_threadsafe(log_errors(_call_event(callback, lock, event)), self.__loop)
 
 
 async def _call_event(callback, lock, event):
-    async with lock:
+    if lock is not None:
+        await lock.acquire()
+    try:
         if iscoroutinefunction(callback):
             await callback(event)
         else:
             callback(event)
+    finally:
+        if lock is not None:
+            lock.release()
 
 
 class Registry(dict):
@@ -151,8 +151,9 @@ class AuxiliaryThreadExecutor(Executor, AuxiliaryThread):
                 continue
             func, args, kwargs, future = task
             try:
-                future.set_result(func(*args, **kwargs))
-            except Exception as ex: # pylint: disable=broad-except
+                result = func(*args, **kwargs)
+                future.set_result(result)
+            except BaseException as ex:  # pylint: disable=broad-except
                 future.set_exception(ex)
 
 
@@ -164,3 +165,18 @@ class VersionNumber(NamedTuple):
     """A major/minor version number."""
     major: int
     minor: int
+
+    def __str__(self):
+        return f"{self.major}.{self.minor}"
+
+
+async def log_errors(awaitable: Awaitable):
+    try:
+        await awaitable
+    except CancelledError:
+        raise
+    except BaseException as ex:
+        get_running_loop().call_exception_handler({
+            "exception": ex
+        })
+        raise

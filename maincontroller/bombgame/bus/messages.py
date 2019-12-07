@@ -275,7 +275,7 @@ class AnnounceMessage(BusMessage):
 
     def _data_repr(self):
         completeness = "complete" if self.init_complete else "incomplete"
-        return f"hardware {self.hw_version}, software {self.sw_version}.{self.sw_version[1]}, init {completeness}"
+        return f"hardware {self.hw_version}, software {self.sw_version}, init {completeness}"
 
 
 @MESSAGE_ID_REGISTRY.register

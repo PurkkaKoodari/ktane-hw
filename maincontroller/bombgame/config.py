@@ -35,3 +35,15 @@ WEB_UI_VERSION = "0.1-a1"
 WEB_PASSWORD = None
 # the timeout for sending the password, in seconds
 WEB_LOGIN_TIMEOUT = 2
+
+# the time waited between sending the reset message and checking which modules are ready
+MODULE_RESET_PERIOD = 0.6
+# the time waited for a module to respond to the MODULE_ENABLE line
+MODULE_ANNOUNCE_TIMEOUT = 1.0
+# the time waited after a module's last message before pinging it
+MODULE_PING_INTERVAL = 1.0
+# the time waited after sending a ping before causing a ping timeout error
+MODULE_PING_TIMEOUT = 1.0
+
+# the time spent in the pre-game wait
+GAME_START_DELAY = 5

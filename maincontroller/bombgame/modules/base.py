@@ -5,7 +5,9 @@ from enum import Enum
 from time import monotonic
 from typing import Tuple, List
 
-from bombgame.bus.messages import StrikeModuleMessage, SolveModuleMessage, ModuleId, ErrorMessage, RecoveredErrorMessage
+from bombgame.bus.messages import (StrikeModuleMessage, SolveModuleMessage, ModuleId, ErrorMessage,
+                                   RecoveredErrorMessage, PingMessage, BusMessage, InitCompleteMessage)
+from bombgame.config import MODULE_PING_INTERVAL, MODULE_PING_TIMEOUT
 from bombgame.events import BombError, BombErrorLevel, ModuleStateChanged
 from bombgame.utils import VersionNumber
 
@@ -28,8 +30,8 @@ class ModuleState(Enum):
 class Module(ABC):
     """The base class for modules."""
 
-    __slots__ = ("_bomb", "bus_id", "location", "hw_version", "sw_version", "last_received", "last_ping_sent", "state",
-                 "errors")
+    __slots__ = ("_bomb", "bus_id", "location", "hw_version", "sw_version", "last_received", "last_ping_sent",
+                 "ping_timeout", "state", "errors")
 
     is_needy = False
     is_boss = False
@@ -43,18 +45,16 @@ class Module(ABC):
         self.location = location
         self.hw_version = hw_version
         self.sw_version = sw_version
-        self.last_received = self.last_ping_sent = monotonic()
+        self.last_received = monotonic()
+        self.last_ping_sent = None
+        self.ping_timeout = False
         self.state = ModuleState.INITIALIZATION
         self.errors = []
-        bomb.add_listener(ErrorMessage, self._track_error_state)
 
-    def _track_error_state(self, message: ErrorMessage):
-        if isinstance(message, RecoveredErrorMessage):
-            for code, existing in self.errors:
-                if code == message.code:
-                    self.errors.remove((code, existing))
-        error = BombError(self, message.error_level, self._describe_error(message))
-        self.errors.append((message.code, error))
+    def trigger_error(self, level: BombErrorLevel, message: str, code: int = -1):
+        """Adds an error to this module and triggers an error event on the bomb."""
+        error = BombError(self, level, message)
+        self.errors.append((code, error))
         self._bomb.trigger(error)
 
     def _describe_error(self, error: ErrorMessage) -> str:
@@ -62,6 +62,48 @@ class Module(ABC):
             return DEFAULT_ERROR_DESCRIPTIONS[error.code]
         except KeyError:
             return UNKNOWN_ERROR_DESCRIPTION
+
+    async def ping_check(self) -> bool:
+        """Checks if the module should trigger a ping timeout or send a ping. Returns ``False`` if a ping timeout
+        occurred, ``True`` otherwise.
+        """
+        now = monotonic()
+        if not self.ping_timeout and self.last_ping_sent is not None and now > self.last_ping_sent + MODULE_PING_TIMEOUT:
+            self.ping_timeout = True
+            self.trigger_error(BombErrorLevel.WARNING, "Ping timeout.")
+            return False
+        if self.last_ping_sent is None and now > self.last_received + MODULE_PING_INTERVAL:
+            self.last_ping_sent = monotonic()
+            await self._bomb.send(PingMessage(self.bus_id))
+        return True
+
+    async def handle_message(self, message: BusMessage):
+        """Handles an incoming message from the module. Returns ``True`` if the message was handled and the module was
+        in a valid state to receive it, ``False`` if the message was invalid for the current state or unknown.
+
+        Module classes should override this method to handle module-specific messages. For these, the subclass method
+        should just return ``True``.
+
+        If the module class requires custom handling for init completion or errors, it should process the messages and
+        then call the base class method to ensure the class state gets updated.
+
+        For any unhandled messages just call the base class method.
+        """
+        if isinstance(message, InitCompleteMessage) and self.state == ModuleState.INITIALIZATION:
+            self.state = ModuleState.CONFIGURATION
+            self._bomb.trigger(ModuleStateChanged(self))
+            return True
+        if isinstance(message, PingMessage) and self.last_ping_sent is not None:
+            self.last_ping_sent = None
+            return True
+        if isinstance(message, ErrorMessage):
+            if isinstance(message, RecoveredErrorMessage):
+                for code, existing in self.errors:
+                    if code == message.code:
+                        self.errors.remove((code, existing))
+            self.trigger_error(message.error_level, self._describe_error(message), message.code)
+            return True
+        return False
 
     @abstractmethod
     def ui_state(self):
@@ -88,14 +130,14 @@ class Module(ABC):
         """Called by module code to mark the module as defused."""
         self.state = ModuleState.DEFUSED
         self._bomb.trigger(ModuleStateChanged(self))
-        await self._bomb.bus.send(SolveModuleMessage(self.bus_id))
+        await self._bomb.send(SolveModuleMessage(self.bus_id))
 
     async def strike(self, count=True):
         """Called by module code to record a strike on the module."""
         if count:
             if await self._bomb.strike():
                 return True
-            await self._bomb.bus.send(StrikeModuleMessage(self.bus_id))
+            await self._bomb.send(StrikeModuleMessage(self.bus_id))
             return False
 
     def __repr__(self):

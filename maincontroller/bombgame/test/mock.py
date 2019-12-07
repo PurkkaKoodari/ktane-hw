@@ -137,6 +137,8 @@ class MockPhysicalModule(ABC, EventSource):
     async def _handle_message(self, message: BusMessage):
         if self.state in (PhysicalModuleState.UNPLUGGED, PhysicalModuleState.CRASHED):
             return
+        if message.module != ModuleId.BROADCAST and message.module != self.module_id:
+            return
         if isinstance(message, ResetMessage):
             await self.hard_reset()
             return

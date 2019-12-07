@@ -1,5 +1,5 @@
 from asyncio import run, Event
-from logging import getLogger, basicConfig as logConfig, DEBUG
+from logging import getLogger, basicConfig as logConfig, INFO
 from signal import signal, SIGINT
 
 import can
@@ -21,7 +21,7 @@ def initialize_can():
 
 
 def init_logging():
-    logConfig(format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=DEBUG)
+    logConfig(format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=INFO)
 
 
 def handle_fatal_error(error):

@@ -1,0 +1,75 @@
+#errorLog {
+    height: 40vh;
+    overflow: hidden scroll;
+    white-space: pre-line;
+}
+#bomb {
+    display: inline-flex;
+}
+.bombSide {
+    display: grid;
+    grid-template-areas: 'title title title' 'mod1 mod2 mod3' 'mod4 mod5 mod6';
+    grid-gap: 10px;
+}
+.bombSide:first-child {
+    margin-right: 20px;
+}
+.bombSide .title {
+    grid-area: title;
+    text-align: center;
+}
+.module {
+    border: 1px solid black;
+    height: 15vh;
+    width: 15vh;
+    position: relative;
+}
+.module .statusLed, .module .errorIndicator {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 2vh;
+    height: 2vh;
+    display: flex;
+    flex-direction: column;
+}
+.module.present .errorIndicator {
+    right: 2vh;
+}
+.module .statusLed {
+    background: gray;
+    border-radius: 1vh;
+}
+.module.state_defused .statusLed {
+    background: lime;
+}
+.module.strike .statusLed {
+    background: red;
+}
+.module .errorIndicator {
+    background: white;
+}
+.module.errorLevel_info .errorIndicator, .module.errorLevel_recovered .errorIndicator {
+    background: royalblue;
+}
+.module.errorLevel_warning .errorIndicator {
+    background: yellow;
+}
+.module.errorLevel_recoverable .errorIndicator {
+    background: darkorange;
+}
+.module.errorLevel_minor .errorIndicator {
+    background: orangered;
+}
+.module.errorLevel_major {
+    background: red;
+}
+.module.errorLevel_fatal {
+    background: darkred;
+}
+.module .details {
+    white-space: pre-line;
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden auto;
+}

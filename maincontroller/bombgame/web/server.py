@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from asyncio import create_task, wait_for, Task
+from asyncio import create_task, wait_for, Task, TimeoutError as AsyncTimeoutError
 from logging import getLogger
 from typing import Optional, Any, Mapping, ClassVar
 
@@ -38,7 +38,7 @@ class WebInterfaceMessage:
             json_data = json.loads(data)
         except json.JSONDecodeError:
             raise InvalidMessage("invalid JSON message") from None
-        if not isinstance(data, dict):
+        if not isinstance(json_data, dict):
             raise InvalidMessage("invalid JSON message") from None
         try:
             message_type = json_data["type"]
@@ -48,7 +48,7 @@ class WebInterfaceMessage:
         if not message_class.receivable:
             raise InvalidMessage("invalid message type")
         values = {}
-        for field, types in message_class.fields.values():
+        for field, types in message_class.fields.items():
             try:
                 value = json_data[field]
             except KeyError:
@@ -68,11 +68,12 @@ class WebInterfaceMessage:
 @MESSAGE_TYPE_REGISTRY.register
 class LoginMessage(WebInterfaceMessage):
     message_type = "login"
-    fields = {"ui_version": str, "password": str}
+    fields = {"ui_version": str, "password": (str, type(None))}
+    receivable = True
 
-    def __init__(self, *, ui_version: int, password: str):
+    def __init__(self, *, ui_version: int, password: Optional[str]):
         super().__init__()
-        self.location = ui_version
+        self.ui_version = ui_version
         self.type = password
 
 
@@ -210,21 +211,24 @@ class WebInterface(EventSource):
     async def _handle_client(self, client: WebSocketServerProtocol, _: str):
         LOGGER.info("Client connected from %s", client.remote_address)
         try:
-            handshake: LoginMessage = await wait_for(_receive(client), WEB_LOGIN_TIMEOUT)
+            try:
+                handshake = await wait_for(_receive(client), WEB_LOGIN_TIMEOUT)
+            except AsyncTimeoutError:
+                handshake = None
             if not isinstance(handshake, LoginMessage):
-                await _invalid_message(client, "must send login-message upon connecting")
+                await _invalid_message(client, "must send login message upon connecting")
             if handshake.ui_version != WEB_UI_VERSION:
                 await _invalid_message(client, "web ui version mismatch", 4001)
             if WEB_PASSWORD is not None:
                 if handshake.password is None:
-                    await _invalid_message(client, "password is required", 4002)
+                    await _invalid_message(client, "password is required", 4003)
                 if handshake.password != WEB_PASSWORD:
                     await _invalid_message(client, "password is incorrect", 4003)
             # TODO send current state
-            # await self._send_to_client(ConfigMessage(whatever), client)
-            # for module in self._bomb.modules:
-            #     await self._send_module(module, client)
-            # await self._send_to_client(StateMessage(whatever), client)
+            await self._send_to_client(ConfigMessage({}), client)
+            for module in self._bomb.modules:
+                await self._send_module(module, client)
+            await self._send_to_client(StateMessage("unknown"), client)
         except ConnectionClosed:
             return
         old_client = self._client
@@ -254,7 +258,7 @@ class WebInterface(EventSource):
             location=module.location,
             module_type=module.bus_id.type,
             serial=module.bus_id.serial,
-            state=module.state,
+            state=module.state.name,
             error_level=module.error_level.name,
             details=module.ui_state()
         ), client)

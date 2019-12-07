@@ -10,7 +10,7 @@ from bombgame.bomb.serial import VOWELS
 from bombgame.bomb.state import BombState
 from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
 from bombgame.events import ModuleStateChanged, BombStateChanged
-from bombgame.modules.base import Module
+from bombgame.modules.base import Module, ModuleState
 from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
 
 
@@ -40,7 +40,6 @@ class SimonSaysModule(Module):
         self._pressed = []
         self._send_task = None
         self._playing_sound = None
-        bomb.bus.add_listener(SimonButtonPressMessage, self._handle_press)
         bomb.add_listener(BombStateChanged, self._handle_bomb_state)
 
     def generate(self):
@@ -51,6 +50,8 @@ class SimonSaysModule(Module):
         pass
 
     def ui_state(self):
+        if self._sequence is None:
+            return {}
         return {
             "sequence": [color.name for color in self._sequence[:self._length]],
             "pressed": [color.name for color in self._pressed]
@@ -74,26 +75,32 @@ class SimonSaysModule(Module):
         blinks = (SimonColor.RED, SimonColor.BLUE, SimonColor.GREEN, SimonColor.YELLOW)
         return dict(zip(blinks, presses))
 
-    async def _handle_press(self, event: SimonButtonPressMessage):
+    async def _handle_press(self, color: SimonColor):
         self._stop_display()
-        self._pressed.append(event.color)
+        self._pressed.append(color)
         correct = self._color_map()[self._sequence[self._length - 1]]
-        if event.color != correct:
+        if color != correct:
             self._pressed.clear()
             self._bomb.trigger(ModuleStateChanged(self))
             if await self.strike():
                 return
-            await self._blink_button(event.color)
+            await self._blink_button(color)
             self._restart_display()
         elif self._length == len(self._sequence):
-            await self._blink_button(event.color)
+            await self._blink_button(color)
             await self.defuse()
         else:
             self._length += 1
             self._pressed.clear()
             self._bomb.trigger(ModuleStateChanged(self))
-            await self._blink_button(event.color)
+            await self._blink_button(color)
             self._restart_display(delay=SIMON_INITIAL_DELAY)
+
+    async def handle_message(self, message: BusMessage):
+        if isinstance(message, SimonButtonPressMessage) and self.state in (ModuleState.GAME, ModuleState.DEFUSED):
+            await self._handle_press(message.color)
+            return True
+        return await super().handle_message(message)
 
     def _handle_bomb_state(self, event: BombStateChanged):
         if event.state == BombState.GAME_STARTED:
@@ -122,7 +129,7 @@ class SimonSaysModule(Module):
             await async_sleep(SIMON_REPEAT_DELAY)
 
     async def _blink_button(self, color: SimonColor):
-        await self._bomb.bus.send(SimonButtonBlinkMessage(self.bus_id, color=color))
+        await self._bomb.send(SimonButtonBlinkMessage(self.bus_id, color=color))
         play_sound(SIMON_SOUNDS[color])
 
 

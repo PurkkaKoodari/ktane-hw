@@ -12,14 +12,19 @@ Usage:
 from __future__ import annotations
 
 from asyncio import create_task, get_running_loop
-from logging import getLogger
+from logging import getLogger, basicConfig as logConfig, DEBUG, INFO
 
 from bombgame.bus.bus import BombBus
-from bombgame.controller import init_game, init_logging, run_game, handle_fatal_error, handle_sigint
+from bombgame.controller import init_game, run_game, handle_fatal_error, handle_sigint
 from bombgame.test.mock import MockGpio, MockPhysicalSimon, MockPhysicalTimer, mock_can_bus
 from bombgame.utils import FatalError
 
 LOGGER = getLogger("BombGameTest")
+
+
+def init_logging():
+    logConfig(format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=DEBUG)
+    getLogger("websockets").setLevel(INFO)
 
 
 def main():

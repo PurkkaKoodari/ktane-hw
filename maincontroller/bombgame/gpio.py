@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from asyncio import Lock, create_task, sleep as async_sleep, wrap_future
+from asyncio import Lock, create_task, sleep as async_sleep, get_running_loop
 from collections import namedtuple
 from logging import getLogger
 from typing import List
@@ -9,7 +9,7 @@ from typing import List
 from bombgame import mcp23017
 from bombgame.casings import Casing
 from bombgame.config import GPIO_SMBUS_ADDR, GPIO_POLL_INTERVAL, GPIO_INTERRUPT_ENABLED, GPIO_INTERRUPT_PIN
-from bombgame.utils import AuxiliaryThreadExecutor, EventSource
+from bombgame.utils import AuxiliaryThreadExecutor, EventSource, log_errors
 
 LOGGER = getLogger("GPIO")
 
@@ -111,7 +111,7 @@ class Gpio(AbstractGpio):
         if self._poller is not None:
             raise RuntimeError("polling already started")
         self._executor.start()
-        self._poller = create_task(self._poll_gpio_loop())
+        self._poller = create_task(log_errors(self._poll_gpio_loop()))
 
     def stop(self):
         """Stops the GPIO auxiliary thread and module ready polling."""
@@ -128,7 +128,7 @@ class Gpio(AbstractGpio):
     async def reset(self):
         """Resets all module enable and widget pins to off."""
         async with self._lock:
-            await wrap_future(self._executor.submit(self._sync_reset))
+            await get_running_loop().run_in_executor(self._executor, self._sync_reset)
 
     def _sync_reset(self):
         for mcp in self._mcps:
@@ -143,7 +143,7 @@ class Gpio(AbstractGpio):
     async def check_ready_changes(self):
         """Polls for changes in module ready pins and returns the locations of currently connected modules."""
         async with self._lock:
-            await wrap_future(self._executor.submit(self._sync_check_ready_changes))
+            await get_running_loop().run_in_executor(self._executor, self._sync_check_ready_changes)
         return [location for location in range(len(self._modules)) if self._prev_ready[location]]
 
     def _sync_check_ready_changes(self):
@@ -162,7 +162,7 @@ class Gpio(AbstractGpio):
         if not 0 <= location < len(self._modules):
             raise ValueError("module location out of range")
         async with self._lock:
-            await wrap_future(self._executor.submit(self._sync_set_enable, location, enabled))
+            await get_running_loop().run_in_executor(self._executor, self._sync_set_enable, location, enabled)
 
     def _sync_set_enable(self, location: int, enabled: bool):
         module = self._modules[location]
@@ -173,7 +173,7 @@ class Gpio(AbstractGpio):
         if not 0 <= location <= len(self._widgets):
             raise ValueError("widget location out of range")
         async with self._lock:
-            await wrap_future(self._executor.submit(self._sync_set_widget, location, value))
+            await get_running_loop().run_in_executor(self._executor, self._sync_set_widget, location, value)
 
     def _sync_set_widget(self, location: int, value: bool):
         widget = self._widgets[location]

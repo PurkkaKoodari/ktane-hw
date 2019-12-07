@@ -6,7 +6,7 @@ from random import sample
 from typing import Sequence
 
 from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
-from bombgame.modules.base import Module
+from bombgame.modules.base import Module, ModuleState
 from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
 
 
@@ -39,7 +39,7 @@ class KeypadSymbol(IntEnum):
     THOUSANDS = 18  # ҂
     I_TAIL = 19  # Ҋ
     ZHE = 20  # Җ
-    HA = 21 # Ҩ
+    HA = 21  # Ҩ
     E_DIAERESIS = 22  # Ӭ
     KOMI_DZJE = 23  # Ԇ
     TEH = 24  # ټ
@@ -67,7 +67,6 @@ class KeypadModule(Module):
         super().__init__(bomb, bus_id, location, hw_version, sw_version)
         self._buttons = None
         self._solution = None
-        bomb.bus.add_listener(KeypadEventMessage, self._handle_event)
 
     def generate(self):
         while True:
@@ -78,19 +77,22 @@ class KeypadModule(Module):
                 self._solution = [key for key in solutions[0] if key in buttons]
 
     async def send_state(self):
-        await self._bomb.bus.send(KeypadSetSolutionMessage(self.bus_id, sequence=self._solution))
+        await self._bomb.send(KeypadSetSolutionMessage(self.bus_id, sequence=self._solution))
+
+    async def handle_message(self, message: BusMessage):
+        if isinstance(message, KeypadEventMessage) and self.state in (ModuleState.GAME, ModuleState.DEFUSED):
+            if message.correct:
+                await self.defuse()
+            else:
+                await self.strike()
+            return True
+        return await super().handle_message(message)
 
     def ui_state(self):
         return {
             "buttons": [button.name for button in self._buttons],
             "solution": self._solution
         }
-
-    async def _handle_event(self, event: KeypadEventMessage):
-        if event.correct:
-            await self.defuse()
-        else:
-            await self.strike()
 
 
 @MODULE_MESSAGE_ID_REGISTRY.register

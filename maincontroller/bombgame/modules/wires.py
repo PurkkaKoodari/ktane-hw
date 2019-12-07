@@ -76,7 +76,6 @@ class WiresModule(Module):
         self._slots = [None] * 6
         self._cut = [False] * 6
         self._solution = None
-        bomb.bus.add_listener(WiresCutMessage, self._handle_event)
 
     def generate(self):
         count = randint(3, 6)
@@ -101,12 +100,15 @@ class WiresModule(Module):
             "solutions": self._solution
         }
 
-    async def _handle_event(self, event: WiresCutMessage):
-        self._cut[event.position] = True
-        if event.position == self._solution:
-            await self.defuse()
-        else:
-            await self.strike()
+    async def handle_message(self, message: BusMessage):
+        if isinstance(message, WiresCutMessage):
+            self._cut[message.position] = True
+            if message.position == self._solution:
+                await self.defuse()
+            else:
+                await self.strike()
+            return True
+        return await super().handle_message(message)
 
 
 @MODULE_MESSAGE_ID_REGISTRY.register

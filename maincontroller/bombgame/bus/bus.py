@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import time
-from asyncio import create_task, wrap_future
+from asyncio import create_task, get_running_loop
 from logging import getLogger
 
 import can
 
 from bombgame.bus.messages import BusMessage
 from bombgame.config import CAN_ERROR_MAX_COUNT, CAN_ERROR_MAX_INTERVAL
-from bombgame.utils import EventSource, AuxiliaryThreadExecutor, FatalError
+from bombgame.utils import EventSource, AuxiliaryThreadExecutor, FatalError, log_errors
 
 LOGGER = getLogger("BombBus")
 
@@ -35,7 +35,7 @@ class BombBus(EventSource):
         LOGGER.info("Starting bus receiver")
         self._receive_executor.start()
         self._send_executor.start()
-        self._receiver = create_task(self._receive_loop())
+        self._receiver = create_task(log_errors(self._receive_loop()))
 
     def stop(self):
         if self._receiver is None:
@@ -47,7 +47,7 @@ class BombBus(EventSource):
 
     async def _receive_loop(self):
         while True:
-            await wrap_future(self._receive_executor.submit(self._sync_receive))
+            await get_running_loop().run_in_executor(self._receive_executor, self._sync_receive)
 
     def _sync_receive(self):
         try:
@@ -65,7 +65,7 @@ class BombBus(EventSource):
 
     async def send(self, message: BusMessage):
         """Send a message to the bus."""
-        await wrap_future(self._send_executor.submit(self._sync_send, message))
+        await get_running_loop().run_in_executor(self._send_executor, self._sync_send, message)
 
     def _sync_send(self, message: BusMessage):
         try:

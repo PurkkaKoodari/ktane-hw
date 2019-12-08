@@ -20,7 +20,6 @@ WORDS = [
 ]
 
 WORD_LENGTH = 5
-SOLUTION_POSITION = WORD_LENGTH + 1
 COLUMN_CHARS = 6
 
 
@@ -52,7 +51,7 @@ class PasswordModule(Module):
             encoded = "".join(column).encode("ascii")
             await self._bomb.send(PasswordSetCharactersMessage(self.bus_id, position=pos, characters=encoded))
         encoded = self._solution.encode("ascii")
-        await self._bomb.send(PasswordSetCharactersMessage(self.bus_id, position=SOLUTION_POSITION, characters=encoded))
+        await self._bomb.send(PasswordSetCharactersMessage(self.bus_id, position=WORD_LENGTH, characters=encoded))
 
     async def handle_message(self, message: BusMessage):
         if isinstance(message, PasswordEventMessage) and self.state in (ModuleState.GAME, ModuleState.DEFUSED):
@@ -79,11 +78,11 @@ class PasswordSetCharactersMessage(BusMessage):
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
                  position: int, characters: bytes):
         super().__init__(self.__class__.message_id[1], module, direction)
-        if position < 0 or position > SOLUTION_POSITION:
-            raise ValueError(f"position must be between 0 and {SOLUTION_POSITION}")
-        if position == SOLUTION_POSITION and len(characters) != WORD_LENGTH:
+        if position < 0 or position > WORD_LENGTH:
+            raise ValueError(f"position must be between 0 and {WORD_LENGTH}")
+        if position == WORD_LENGTH and len(characters) != WORD_LENGTH:
             raise ValueError(f"solution must have {WORD_LENGTH} characters")
-        if position != SOLUTION_POSITION and len(characters) != COLUMN_CHARS:
+        if position < WORD_LENGTH and len(characters) != COLUMN_CHARS:
             raise ValueError(f"column must have {COLUMN_CHARS} characters")
         self.position = position
         self.characters = characters
@@ -100,7 +99,7 @@ class PasswordSetCharactersMessage(BusMessage):
         return struct.pack("<B", self.position) + self.characters
 
     def _data_repr(self) -> str:
-        kind = f"column {self.position + 1}" if self.position != SOLUTION_POSITION else "solution"
+        kind = f"column {self.position + 1}" if self.position < WORD_LENGTH else "solution"
         return f"{kind}: {self.characters}"
 
 

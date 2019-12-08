@@ -2,4 +2,3 @@ python-can >= 3.3.2, < 4.0
 pygame >= 1.9.6, < 2.0
 RPi.GPIO
 websockets >= 8.1
-jsonschema >= 3.1.1

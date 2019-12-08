@@ -1,50 +1,50 @@
 from __future__ import annotations
 
 import struct
-from enum import IntEnum
+from enum import IntEnum, Enum
 from random import sample
-from typing import Sequence
+from typing import Sequence, Optional
 
 from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
 from bombgame.modules.base import Module, ModuleState
 from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
 
 
-class KeypadButton(IntEnum):
+class KeypadPosition(IntEnum):
     TOP_LEFT = 0
     TOP_RIGHT = 1
     BOTTOM_LEFT = 2
     BOTTOM_RIGHT = 3
 
 
-class KeypadSymbol(IntEnum):
-    COPYRIGHT = 0  # ©
-    PILCROW = 1  # ¶
-    QUESTION = 2  # ¿
-    AE = 3  # æ
-    LAMBDA = 4  # ƛ
-    PSI = 5  # Ψ
-    OMEGA = 6  # Ω
-    KAI = 7  # ϗ
-    ARCHAIC_KOPPA = 8  # Ϙ
-    KOPPA = 9  # Ϟ
-    SHIMA = 10  # Ϭ
-    C = 11  # Ͼ
-    REVERSE_C = 12  # Ͽ
-    YAT = 13  # Ѣ
-    LITTLE_YUS = 14  # Ѧ
-    IOTIFIED_YUS = 15  # Ѭ
-    KSI = 16  # Ѯ
-    OMEGA_TITLO = 17  # Ѽ
-    THOUSANDS = 18  # ҂
-    I_TAIL = 19  # Ҋ
-    ZHE = 20  # Җ
-    HA = 21  # Ҩ
-    E_DIAERESIS = 22  # Ӭ
-    KOMI_DZJE = 23  # Ԇ
-    TEH = 24  # ټ
-    BLACK_STAR = 25  # ★
-    WHITE_STAR = 26  # ☆
+class KeypadSymbol(Enum):
+    COPYRIGHT = "©"
+    PILCROW = "¶"
+    QUESTION = "¿"
+    AE = "æ"
+    LAMBDA = "ƛ"
+    PSI = "Ψ"
+    OMEGA = "Ω"
+    KAI = "ϗ"
+    ARCHAIC_KOPPA = "Ϙ"
+    KOPPA = "Ϟ"
+    SHIMA = "Ϭ"
+    C = "Ͼ"
+    REVERSE_C = "Ͽ"
+    YAT = "Ѣ"
+    LITTLE_YUS = "Ѧ"
+    IOTIFIED_YUS = "Ѭ"
+    KSI = "Ѯ"
+    OMEGA_TITLO = "Ѽ"
+    THOUSANDS = "҂"
+    I_TAIL = "Ҋ"
+    ZHE = "Җ"
+    HA = "Ҩ"
+    E_DIAERESIS = "Ӭ"
+    KOMI_DZJE = "Ԇ"
+    TEH = "ټ"
+    BLACK_STAR = "★"
+    WHITE_STAR = "☆"
 
 
 KEYPAD_COLUMNS = [
@@ -63,6 +63,9 @@ class KeypadModule(Module):
 
     __slots__ = ("_buttons", "_solution")
 
+    _buttons: Optional[Sequence[KeypadSymbol]]
+    _solution: Optional[Sequence[KeypadPosition]]
+
     def __init__(self, bomb, bus_id, location, hw_version, sw_version):
         super().__init__(bomb, bus_id, location, hw_version, sw_version)
         self._buttons = None
@@ -70,11 +73,12 @@ class KeypadModule(Module):
 
     def generate(self):
         while True:
-            buttons = sample(KeypadSymbol.__members__, 4)
+            buttons: Sequence[KeypadSymbol] = sample(KeypadSymbol.__members__, 4)
             solutions = [column for column in KEYPAD_COLUMNS if all(key in column for key in buttons)]
             if len(solutions) == 1:
                 self._buttons = buttons
-                self._solution = [key for key in solutions[0] if key in buttons]
+                self._solution = [KeypadPosition(buttons.index(key)) for key in solutions[0] if key in buttons]
+                break
 
     async def send_state(self):
         await self._bomb.send(KeypadSetSolutionMessage(self.bus_id, sequence=self._solution))
@@ -90,8 +94,8 @@ class KeypadModule(Module):
 
     def ui_state(self):
         return {
-            "buttons": [button.name for button in self._buttons],
-            "solution": self._solution
+            "buttons": [symbol.value for symbol in self._buttons],
+            "solution": [position.name for position in self._solution]
         }
 
 
@@ -102,22 +106,24 @@ class KeypadSetSolutionMessage(BusMessage):
     __slots__ = ("sequence",)
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 sequence: Sequence[KeypadButton]):
+                 sequence: Sequence[KeypadPosition]):
         super().__init__(self.__class__.message_id[1], module, direction)
+        if set(sequence) != set(KeypadPosition.__members__):
+            raise ValueError("sequence must contain all 4 buttons")
         self.sequence = sequence
 
     @classmethod
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
         if len(data) != 4:
             raise ValueError(f"{cls.__name__} must have 4 bytes of data")
-        sequence = tuple(KeypadButton(byte) for byte in data)
+        sequence = tuple(KeypadPosition(byte) for byte in data)
         return cls(module, direction, sequence=sequence)
 
     def _serialize_data(self):
         return b"".join(struct.pack("<B", button) for button in self.sequence)
 
     def _data_repr(self):
-        return " ".join(button.name for button in self.sequence)
+        return " ".join(position.name for position in self.sequence)
 
 
 @MODULE_MESSAGE_ID_REGISTRY.register

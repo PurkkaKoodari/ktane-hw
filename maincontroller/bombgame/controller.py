@@ -1,6 +1,7 @@
 from asyncio import run, Event
-from logging import getLogger, basicConfig as logConfig, INFO
+from logging import getLogger, basicConfig as logConfig, INFO, DEBUG
 from signal import signal, SIGINT
+from sys import argv
 
 import can
 
@@ -20,8 +21,10 @@ def initialize_can():
     return can.Bus(**CAN_CONFIG)
 
 
-def init_logging():
-    logConfig(format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=INFO)
+def init_logging(verbose=False):
+    logConfig(format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=DEBUG if verbose else INFO)
+    if verbose:
+        getLogger("websockets").setLevel(INFO)
 
 
 def handle_fatal_error(error):
@@ -53,7 +56,8 @@ async def run_game(can_bus, gpio, quit_evt):
 
 
 async def main():
-    init_logging()
+    verbose = "-v" in argv
+    init_logging(verbose)
     LOGGER.info("Starting. Exit cleanly with SIGINT/Ctrl-C")
     quit_evt = handle_sigint()
     init_game()

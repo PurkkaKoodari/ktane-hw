@@ -229,7 +229,7 @@ class Bomb(EventSource):
         # TODO: play sounds here; room-scale effects will react to the BombStateChanged event
 
     async def _handle_module_state_change(self, _: ModuleStateChanged):
-        with self._state_lock:
+        async with self._state_lock:
             if self._state == BombState.INITIALIZING and all(module.state == ModuleState.CONFIGURATION for module in self.modules):
                 self._init_cond.notify_all()
                 self._state = BombState.INITIALIZED

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from asyncio import Lock, create_task, sleep as async_sleep, get_running_loop
+from asyncio import Lock, create_task, sleep as async_sleep, get_running_loop, Task
 from collections import namedtuple
 from logging import getLogger
-from typing import List
+from typing import List, Optional
 
 from bombgame import mcp23017
 from bombgame.casings import Casing
@@ -51,14 +51,23 @@ class AbstractGpio(EventSource, ABC):
         """Sets the state of a widget pin."""
 
 
+_ModuleInfo = namedtuple("_ModuleInfo", ["mcp", "ready", "enable"])
+_WidgetInfo = namedtuple("_WidgetInfo", ["mcp", "widget"])
+
+
 class Gpio(AbstractGpio):
     """A class that manages all the MCP23017 chips in a Casing.
 
     All public methods are asynchronous.
     """
 
-    _ModuleInfo = namedtuple("_ModuleInfo", ["mcp", "ready", "enable"])
-    _WidgetInfo = namedtuple("_WidgetInfo", ["mcp", "widget"])
+    _mcps: List[mcp23017.MCP23017]
+    _modules: List[_ModuleInfo]
+    _widgets: List[_WidgetInfo]
+    _prev_ready: List[bool]
+    _lock: Lock
+    _poller: Optional[Task]
+    _executor: AuxiliaryThreadExecutor
 
     def __init__(self, casing: Casing):
         """Creates a Gpio object and synchronously initializes the MCP23017 chips."""
@@ -88,11 +97,11 @@ class Gpio(AbstractGpio):
                     mcp.pin_interrupt(None, ready, mcp23017.BOTH if GPIO_INTERRUPT_ENABLED else mcp23017.OFF)
                     mcp.pin_mode(None, enable, mcp23017.OUTPUT, invert=True)
                     mcp.write_pin(None, enable, False)
-                    self._modules.append((mcp, ready, enable))
+                    self._modules.append(_ModuleInfo(mcp, ready, enable))
                 for widget in spec.widget_pins:
                     mcp.pin_mode(None, widget, mcp23017.OUTPUT)
                     mcp.write_pin(None, widget, False)
-                    self._widgets.append((mcp, widget))
+                    self._widgets.append(_WidgetInfo(mcp, widget))
             self._mcps.append(mcp)
 
     def _initialize_interrupt(self):
@@ -110,6 +119,7 @@ class Gpio(AbstractGpio):
         """Starts the GPIO auxiliary thread and module ready polling."""
         if self._poller is not None:
             raise RuntimeError("polling already started")
+        LOGGER.info("Starting GPIO poller")
         self._executor.start()
         self._poller = create_task(log_errors(self._poll_gpio_loop()))
 
@@ -117,6 +127,7 @@ class Gpio(AbstractGpio):
         """Stops the GPIO auxiliary thread and module ready polling."""
         if self._poller is None:
             raise RuntimeError("polling not started")
+        LOGGER.info("Stopping GPIO poller")
         self._poller.cancel()
         self._executor.shutdown(True)
 
@@ -134,9 +145,9 @@ class Gpio(AbstractGpio):
         for mcp in self._mcps:
             mcp.begin_write()
         for module in self._modules:
-            module.mcp.write_pin(module.enable, False)
+            module.mcp.write_pin(None, module.enable, False)
         for widget in self._widgets:
-            widget.mcp.write_pin(widget.widget, False)
+            widget.mcp.write_pin(None, widget.widget, False)
         for mcp in self._mcps:
             mcp.end_write()
 
@@ -150,7 +161,7 @@ class Gpio(AbstractGpio):
         for mcp in self._mcps:
             mcp.begin_read()
         for location, module in enumerate(self._modules):
-            current = module.mcp.read_pin(module.enable)
+            current = module.mcp.read_pin(None, module.enable)
             if current != self._prev_ready[location]:
                 self.trigger(ModuleReadyChange(location, current))
             self._prev_ready[location] = current
@@ -166,7 +177,7 @@ class Gpio(AbstractGpio):
 
     def _sync_set_enable(self, location: int, enabled: bool):
         module = self._modules[location]
-        module.mcp.write_pin(module.enable, enabled)
+        module.mcp.write_pin(None, module.enable, enabled)
 
     async def set_widget(self, location: int, value: bool):
         """Sets the state of a single widget pin."""
@@ -177,4 +188,4 @@ class Gpio(AbstractGpio):
 
     def _sync_set_widget(self, location: int, value: bool):
         widget = self._widgets[location]
-        widget.mcp.write_pin(widget.widget, value)
+        widget.mcp.write_pin(None, widget.widget, value)

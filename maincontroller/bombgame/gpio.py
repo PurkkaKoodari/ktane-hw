@@ -161,7 +161,7 @@ class Gpio(AbstractGpio):
         for mcp in self._mcps:
             mcp.begin_read()
         for location, module in enumerate(self._modules):
-            current = module.mcp.read_pin(None, module.enable)
+            current = module.mcp.read_pin(None, module.ready)
             if current != self._prev_ready[location]:
                 self.trigger(ModuleReadyChange(location, current))
             self._prev_ready[location] = current

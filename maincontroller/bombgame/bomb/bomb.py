@@ -212,6 +212,7 @@ class Bomb(EventSource):
     async def _start_game_task(self):
         for module in self.modules:
             await module.send_state()
+            module.state = ModuleState.GAME
         self._state = BombState.GAME_STARTING
         self.trigger(BombStateChanged(BombState.GAME_STARTING))
         await self.send(LaunchGameMessage(ModuleId.BROADCAST))

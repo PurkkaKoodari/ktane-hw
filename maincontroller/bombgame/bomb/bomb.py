@@ -249,6 +249,8 @@ class Bomb(EventSource):
         if self.strikes >= self.max_strikes:
             await self.explode()
             return True
+        if self.strikes <= 4:
+            self.timer_speed += 0.25
         self.trigger(ModuleStriked(module))
         # TODO play strike sound
         return False

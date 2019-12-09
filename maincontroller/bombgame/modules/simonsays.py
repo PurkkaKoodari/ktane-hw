@@ -22,6 +22,8 @@ class SimonColor(IntEnum):
     RED = 4
 
 
+ACTUAL_COLORS = [SimonColor.BLUE, SimonColor.YELLOW, SimonColor.GREEN, SimonColor.RED]
+
 SIMON_BLINK_INTERVAL = 0.6
 SIMON_INITIAL_DELAY = 2.0
 SIMON_REPEAT_DELAY = 5.0
@@ -45,7 +47,7 @@ class SimonSaysModule(Module):
 
     def generate(self):
         length = randint(3, 5)
-        self._sequence = [choice(SimonColor.__members__) for _ in range(length)]
+        self._sequence = [choice(ACTUAL_COLORS) for _ in range(length)]
 
     async def send_state(self):
         pass

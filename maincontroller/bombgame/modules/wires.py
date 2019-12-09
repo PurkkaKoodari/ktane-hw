@@ -79,7 +79,7 @@ class WiresModule(Module):
 
     def generate(self):
         count = randint(3, 6)
-        self._wires = [choice(WireColor.__members__) for _ in range(count)]
+        self._wires = [choice(list(WireColor.__members__.values())) for _ in range(count)]
         indices = sample(range(6), count)
         for index, color in zip(indices, self._wires):
             self._slots[index] = color

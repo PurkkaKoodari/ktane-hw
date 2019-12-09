@@ -73,7 +73,7 @@ class KeypadModule(Module):
 
     def generate(self):
         while True:
-            buttons: Sequence[KeypadSymbol] = sample(KeypadSymbol.__members__, 4)
+            buttons: Sequence[KeypadSymbol] = sample(list(KeypadSymbol.__members__.values()), 4)
             solutions = [column for column in KEYPAD_COLUMNS if all(key in column for key in buttons)]
             if len(solutions) == 1:
                 self._buttons = buttons
@@ -108,7 +108,7 @@ class KeypadSetSolutionMessage(BusMessage):
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
                  sequence: Sequence[KeypadPosition]):
         super().__init__(self.__class__.message_id[1], module, direction)
-        if set(sequence) != set(KeypadPosition.__members__):
+        if set(sequence) != set(KeypadPosition.__members__.values()):
             raise ValueError("sequence must contain all 4 buttons")
         self.sequence = sequence
 

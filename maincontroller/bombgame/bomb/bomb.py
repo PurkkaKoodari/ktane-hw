@@ -102,7 +102,8 @@ class Bomb(EventSource):
             except AsyncTimeoutError:
                 self._init_fail(f"module at {self.casing.location(location)} did not announce in time")
                 return
-            await self._gpio.set_enable(location, False)
+            finally:
+                await self._gpio.set_enable(location, False)
         # check that we have a timer module somewhere
         if not any(isinstance(module, TimerModule) for module in self.modules):
             self._init_fail("no timer found on bomb")

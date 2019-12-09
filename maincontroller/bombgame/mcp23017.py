@@ -1,7 +1,7 @@
 from collections import namedtuple
 from typing import Optional, List
 
-from smbus import SMBus
+from smbus2 import SMBus
 
 Port = namedtuple("Port", ["number", "IODIRx", "IPOLx", "GPINTENx", "DEFVALx", "INTCONx", "GPPUx", "INTFx", "INTCAPx", "GPIOx", "OLATx"])
 IntMode = namedtuple("IntMode", ["GPINTENx", "DEFVALx", "INTCONx"])

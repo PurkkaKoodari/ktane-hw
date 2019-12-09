@@ -39,7 +39,7 @@ class Casing(ABC):
 class VanillaCasing(Casing):
     """The bomb casing in the vanilla game."""
 
-    capacity = 0
+    capacity = 4
     widget_capacity = 0
 
     def location(self, index: int) -> str:
@@ -49,7 +49,7 @@ class VanillaCasing(Casing):
 
     # TODO add all expanders for full setup
     gpio_config = (
-        MCP23017Spec(0x20, (0, 1), (4, 5), ()),
+        MCP23017Spec(0x20, (0, 1, 2, 3), (4, 5, 6, 7), ()),
         # MCP23017Spec(0x21, (0, 1), (4, 5), ()),
         # MCP23017Spec(0x22, (0, 1), (4, 5), ()),
         # MCP23017Spec(0x23, (0, 1), (4, 5), ()),

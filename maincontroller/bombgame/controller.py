@@ -38,21 +38,28 @@ def handle_sigint():
     return quit_evt
 
 
-def init_game():
+async def prepare_game(can_bus=None, gpio=None):
     LOGGER.info("Loading modules")
     load_modules()
+    if can_bus is None:
+        can_bus = initialize_can()
+    if gpio is None:
+        gpio = Gpio(BOMB_CASING)
+        gpio.start()
     initialize_local_playback()
-
-
-async def run_game(can_bus, gpio, quit_evt):
     bus = BombBus(can_bus)
     bus.add_listener(FatalError, handle_fatal_error)
     bus.start()
     web_ui = WebInterface(bus, gpio)
     await web_ui.start()
-    await quit_evt.wait()
+    return can_bus, gpio, bus, web_ui
+
+
+async def cleanup_game(gpio, bus, web_ui):
     await web_ui.stop()
     bus.stop()
+    if gpio is not None:
+        gpio.stop()
 
 
 async def main():
@@ -60,12 +67,9 @@ async def main():
     init_logging(verbose)
     LOGGER.info("Starting. Exit cleanly with SIGINT/Ctrl-C")
     quit_evt = handle_sigint()
-    init_game()
-    can_bus = initialize_can()
-    gpio = Gpio(BOMB_CASING)
-    gpio.start()
-    await run_game(can_bus, gpio, quit_evt)
-    gpio.stop()
+    can_bus, gpio, bus, web_ui = await prepare_game()
+    await quit_evt.wait()
+    await cleanup_game(gpio, bus, web_ui)
     LOGGER.info("Exiting")
 
 if __name__ == "__main__":

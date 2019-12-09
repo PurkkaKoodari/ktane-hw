@@ -8,9 +8,9 @@ from bombgame.bomb.serial import BombSerial
 from bombgame.bomb.state import BombState
 from bombgame.bus.bus import BombBus
 from bombgame.bus.messages import (BusMessage, ResetMessage, AnnounceMessage, DefuseBombMessage, ExplodeBombMessage,
-                                   ModuleId)
+                                   ModuleId, LaunchGameMessage, StartTimerMessage)
 from bombgame.casings import Casing
-from bombgame.config import GAME_START_DELAY, MODULE_RESET_PERIOD, MODULE_ANNOUNCE_TIMEOUT
+from bombgame.config import GAME_START_DELAY, MODULE_RESET_PERIOD, MODULE_ANNOUNCE_TIMEOUT, DEFAULT_MAX_STRIKES
 from bombgame.events import (BombErrorLevel, BombError, BombModuleAdded, ModuleStateChanged, BombStateChanged,
                              ModuleStriked)
 from bombgame.gpio import AbstractGpio, ModuleReadyChange
@@ -26,8 +26,6 @@ class Bomb(EventSource):
     """
     The bomb, consisting of a casing and modules.
     """
-
-    DEFAULT_MAX_STRIKES = 3
 
     _bus: BombBus
     casing: Casing
@@ -47,7 +45,7 @@ class Bomb(EventSource):
     _gpio: AbstractGpio
     _running_tasks: List[Task]
 
-    def __init__(self, bus: BombBus, gpio: AbstractGpio, casing: Casing, *, max_strikes: int = DEFAULT_MAX_STRIKES, serial_number: str = None):
+    def __init__(self, bus: BombBus, gpio: AbstractGpio, casing: Casing, *, serial_number: str = None):
         super().__init__()
         self._bus = bus
         self._gpio = gpio
@@ -55,7 +53,7 @@ class Bomb(EventSource):
         self.modules = []
         self.modules_by_bus_id = {}
         self.modules_by_location = {}
-        self.max_strikes = max_strikes
+        self.max_strikes = DEFAULT_MAX_STRIKES
         self.strikes = 0
         self.time_left = 0.0
         self.timer_speed = 1.0
@@ -116,6 +114,11 @@ class Bomb(EventSource):
         self._state_lock.release()
         LOGGER.debug("Initialization complete")
         self.trigger(BombStateChanged(BombState.INITIALIZED))
+        # TODO implement an actual solution generation system
+        self.time_left = 300.0
+        for module in self.modules:
+            module.generate()
+            self.trigger(ModuleStateChanged(module))
 
     def deinitialize(self):
         """Stops all running tasks for the bomb."""
@@ -201,7 +204,7 @@ class Bomb(EventSource):
                 # TODO module auto-restart?
             await async_sleep(0.1)
 
-    async def start_game(self):
+    def start_game(self):
         """Starts the game with the initial wait phase."""
         self.create_task(self._start_game_task())
 
@@ -210,16 +213,18 @@ class Bomb(EventSource):
             await module.send_state()
         self._state = BombState.GAME_STARTING
         self.trigger(BombStateChanged(BombState.GAME_STARTING))
+        await self.send(LaunchGameMessage(ModuleId.BROADCAST))
         # TODO: add at least an option to manually do the starting from UI
         await async_sleep(GAME_START_DELAY)
         self._state = BombState.GAME_STARTED
         self.trigger(BombStateChanged(BombState.GAME_STARTED))
+        await self.send(StartTimerMessage(ModuleId.BROADCAST))
 
     async def explode(self):
         """Ends the game by exploding the bomb."""
         self._state = BombState.EXPLODED
         self.trigger(BombStateChanged(BombState.EXPLODED))
-        await self._bus.send(ExplodeBombMessage(ModuleId.BROADCAST))
+        await self.send(ExplodeBombMessage(ModuleId.BROADCAST))
         # TODO: play sounds here; room-scale effects will react to the BombStateChanged event
 
     async def _handle_module_state_change(self, _: ModuleStateChanged):
@@ -230,7 +235,7 @@ class Bomb(EventSource):
         if self._state == BombState.GAME_STARTED and all(module.state == ModuleState.DEFUSED or not module.must_solve for module in self.modules):
             self._state = BombState.DEFUSED
             self.trigger(BombStateChanged(BombState.DEFUSED))
-            await self._bus.send(DefuseBombMessage(ModuleId.BROADCAST))
+            await self.send(DefuseBombMessage(ModuleId.BROADCAST))
 
     async def strike(self, module: Module) -> bool:
         """Called by modules to indicate a strike.

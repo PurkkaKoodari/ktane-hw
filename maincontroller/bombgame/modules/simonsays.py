@@ -31,7 +31,7 @@ SIMON_REPEAT_DELAY = 5.0
 class SimonSaysModule(Module):
     module_id = 5
 
-    __slots__ = ("_sequence", "_length", "_pressed", "_send_task", "_playing_sound")
+    __slots__ = ("_sequence", "_length", "_pressed", "_interacted", "_send_task", "_playing_sound")
 
     def __init__(self, bomb, bus_id, location, hw_version, sw_version):
         super().__init__(bomb, bus_id, location, hw_version, sw_version)
@@ -39,6 +39,7 @@ class SimonSaysModule(Module):
         self._length = 1
         self._pressed = []
         self._send_task = None
+        self._interacted = False
         self._playing_sound = None
         bomb.add_listener(BombStateChanged, self._handle_bomb_state)
 
@@ -76,6 +77,7 @@ class SimonSaysModule(Module):
         return dict(zip(blinks, presses))
 
     async def _handle_press(self, color: SimonColor):
+        self._interacted = True
         self._stop_display()
         self._pressed.append(color)
         correct = self._color_map()[self._sequence[self._length - 1]]
@@ -130,7 +132,8 @@ class SimonSaysModule(Module):
 
     async def _blink_button(self, color: SimonColor):
         await self._bomb.send(SimonButtonBlinkMessage(self.bus_id, color=color))
-        play_sound(SIMON_SOUNDS[color])
+        if self._interacted:
+            play_sound(SIMON_SOUNDS[color])
 
 
 SIMON_SOUNDS = {

@@ -250,6 +250,9 @@ class WebInterface(EventSource):
         elif isinstance(message, ConfigMessage):
             # TODO
             await _invalid_message(client, "config not implemented")
+        elif isinstance(message, StartGameMessage):
+            if self._bomb._state == BombState.INITIALIZED:
+                self._bomb.start_game()
         else:
             await _invalid_message(client, "invalid message type")
 

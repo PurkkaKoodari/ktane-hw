@@ -153,4 +153,10 @@
             "type": "reset"
         }))
     })
+    document.getElementById("startGame").addEventListener("click", e => {
+        if (!connected) return
+        ws.send(JSON.stringify({
+            "type": "start_game"
+        }))
+    })
 })()

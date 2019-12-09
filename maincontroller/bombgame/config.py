@@ -47,3 +47,6 @@ MODULE_PING_TIMEOUT = 1.0
 
 # the time spent in the pre-game wait
 GAME_START_DELAY = 5
+
+# the default number of strikes before the bomb explodes
+DEFAULT_MAX_STRIKES = 3

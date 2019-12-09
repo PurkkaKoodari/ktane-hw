@@ -123,7 +123,7 @@ class BusMessage(ABC):
     message_id = Ungettable
 
     def __init__(self, id_: BusMessageId, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT):
-        if MESSAGE_ID_REGISTRY[id_] != self.__class__:
+        if id_ < BusMessageId.MODULE_SPECIFIC_0 and MESSAGE_ID_REGISTRY[id_] != self.__class__:
             raise ValueError("incorrect message class for id")
         if module.is_broadcast() and direction != BusMessageDirection.OUT:
             raise ValueError("broadcast messages must be outward")

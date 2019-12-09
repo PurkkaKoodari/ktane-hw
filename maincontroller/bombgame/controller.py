@@ -25,6 +25,7 @@ def init_logging(verbose=False):
     logConfig(format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=DEBUG if verbose else INFO)
     if verbose:
         getLogger("websockets").setLevel(INFO)
+        getLogger("can").setLevel(INFO)
 
 
 def handle_fatal_error(error):

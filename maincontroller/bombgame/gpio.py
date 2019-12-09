@@ -95,8 +95,8 @@ class Gpio(AbstractGpio):
                 for ready, enable in zip(spec.ready_pins, spec.enable_pins):
                     mcp.pin_mode(None, ready, mcp23017.INPUT_PULLUP, invert=True)
                     mcp.pin_interrupt(None, ready, mcp23017.BOTH if GPIO_INTERRUPT_ENABLED else mcp23017.OFF)
-                    mcp.pin_mode(None, enable, mcp23017.OUTPUT, invert=True)
-                    mcp.write_pin(None, enable, False)
+                    mcp.pin_mode(None, enable, mcp23017.OUTPUT)
+                    mcp.write_pin(None, enable, True)
                     self._modules.append(_ModuleInfo(mcp, ready, enable))
                 for widget in spec.widget_pins:
                     mcp.pin_mode(None, widget, mcp23017.OUTPUT)
@@ -145,7 +145,7 @@ class Gpio(AbstractGpio):
         for mcp in self._mcps:
             mcp.begin_write()
         for module in self._modules:
-            module.mcp.write_pin(None, module.enable, False)
+            module.mcp.write_pin(None, module.enable, True)
         for widget in self._widgets:
             widget.mcp.write_pin(None, widget.widget, False)
         for mcp in self._mcps:
@@ -177,7 +177,7 @@ class Gpio(AbstractGpio):
 
     def _sync_set_enable(self, location: int, enabled: bool):
         module = self._modules[location]
-        module.mcp.write_pin(None, module.enable, enabled)
+        module.mcp.write_pin(None, module.enable, not enabled)
 
     async def set_widget(self, location: int, value: bool):
         """Sets the state of a single widget pin."""

@@ -109,8 +109,9 @@ class Bomb(EventSource):
         # start pinging modules that have not sent anything in a while
         self.create_task(self._ping_loop())
         # wait for all modules to initialize
-        LOGGER.debug("All modules recognized, waiting for initialization")
-        await self._init_cond.wait_for(lambda: self._state == BombState.INITIALIZED)
+        if not all(module.state == ModuleState.CONFIGURATION for module in self.modules):
+            LOGGER.debug("All modules recognized, waiting for initialization")
+            await self._init_cond.wait_for(lambda: self._state == BombState.INITIALIZED)
         self._state_lock.release()
         LOGGER.debug("Initialization complete")
         self.trigger(BombStateChanged(BombState.INITIALIZED))
@@ -228,14 +229,15 @@ class Bomb(EventSource):
         # TODO: play sounds here; room-scale effects will react to the BombStateChanged event
 
     async def _handle_module_state_change(self, _: ModuleStateChanged):
-        if self._state == BombState.INITIALIZING and all(module.state == ModuleState.CONFIGURATION for module in self.modules):
-            self._state = BombState.INITIALIZED
-            self._init_cond.notify_all()
-            return
-        if self._state == BombState.GAME_STARTED and all(module.state == ModuleState.DEFUSED or not module.must_solve for module in self.modules):
-            self._state = BombState.DEFUSED
-            self.trigger(BombStateChanged(BombState.DEFUSED))
-            await self.send(DefuseBombMessage(ModuleId.BROADCAST))
+        with self._state_lock:
+            if self._state == BombState.INITIALIZING and all(module.state == ModuleState.CONFIGURATION for module in self.modules):
+                self._init_cond.notify_all()
+                self._state = BombState.INITIALIZED
+                return
+            if self._state == BombState.GAME_STARTED and all(module.state == ModuleState.DEFUSED or not module.must_solve for module in self.modules):
+                self._state = BombState.DEFUSED
+                self.trigger(BombStateChanged(BombState.DEFUSED))
+                await self.send(DefuseBombMessage(ModuleId.BROADCAST))
 
     async def strike(self, module: Module) -> bool:
         """Called by modules to indicate a strike.

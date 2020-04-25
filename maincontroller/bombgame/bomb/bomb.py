@@ -240,9 +240,9 @@ class Bomb(EventSource):
         # timer task: trigger explosion and keep timer module in sync
         self._last_timer_update = monotonic()
         while self._state == BombState.GAME_STARTED:
+            await self._update_time()
             expected_tick = (self.time_left % 1) / self.timer_speed
             await async_sleep(expected_tick)
-            await self._update_time()
 
     async def _update_time(self):
         now = monotonic()

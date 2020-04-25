@@ -2,7 +2,7 @@
 
 This document specifies the protocol used for communication over the CAN bus between modules and the main controller.
 
-This specification is version `1.0-alpha8`.
+This specification is version `1.0-alpha9`.
 
 ## Definitions
 
@@ -87,7 +87,7 @@ The following message IDs are defined:
 | 0x00 | Reset | request, broadcast | 0 | all |
 | 0x01 | Announce | event | 5 | reset |
 | 0x02 | Init complete | event | 0 | initialization |
-| 0x03 | Ping | request, response | 0 | all except reset |
+| 0x03 | Ping | request, response | 1 | all except reset |
 | 0x10 | Launch game | broadcast | 0 | configuration |
 | 0x11 | Start timer | broadcast | 0 | game |
 | 0x12 | Explode | broadcast | 0 | game |
@@ -146,9 +146,13 @@ This message indicates that the module has completed its reset sequence and that
 
 ### ID 0x03: Ping
 
-This message is sent by the MC. It is only valid for modules in _initialization mode_, _configuration mode_ and _game mode_. The message contains no data.
+This message is sent by the MC. It is only valid for modules in _initialization mode_, _configuration mode_ and _game mode_. The message contains the following data:
 
-Upon receiving the message, a module MUST respond with a Ping (0x03) message with no data.
+| Bits | Length | Field | Description |
+|------|--------|-------|-------------|
+| 0-7 | 8 | number | The ping sequence number, copied to the response. |
+
+Upon receiving the message, a module MUST respond with a Ping (0x03) message with the same number.
 
 ### ID 0x10: Launch game
 

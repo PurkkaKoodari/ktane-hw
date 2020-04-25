@@ -87,34 +87,28 @@ void moduleLoop() {
         matrix.set(4, 7, true);
       } else {
         uint16_t real_speed = mode == GAME && timer_started && !game_ended ? timer_speed : 0;
-        unsigned long centis_elapsed = (millis() - last_tick) * real_speed / 2560;
-        int16_t seconds_elapsed = (int16_t) (centis_elapsed / 100);
-        centis_elapsed %= 100;
-        if (seconds_elapsed > 0 && centis_elapsed == 0) {
-          centis_elapsed = 100;
-          seconds_elapsed -= 1;
-        }
-        int16_t real_secs_left = (int16_t) seconds_left - seconds_elapsed;
-        if (real_secs_left < 0) {
-          real_secs_left = 0;
-          centis_elapsed = 100;
+        signed long centis_elapsed = (signed long) ((millis() - last_tick) * real_speed / 2560);
+        signed long centis_left = 100 * (signed long) seconds_left - centis_elapsed;
+        if (centis_left < 0) {
+          centis_left = 0;
         }
         uint8_t digits[4];
-        if (real_secs_left < 60) {
-          digits[0] = digits_7seg[real_secs_left / 10];
-          digits[1] = digits_7seg[real_secs_left % 10];
-          uint16_t centis_left = 100 - (uint16_t) centis_elapsed;
-          digits[2] = digits_7seg[centis_left / 10];
-          digits[3] = digits_7seg[centis_left % 10];
+        if (centis_left < 6000) {
+          uint8_t secs = (uint8_t) (centis_left / 100);
+          uint8_t centis = (uint8_t) (centis_left % 100);
+          digits[0] = digits_7seg[secs / 10];
+          digits[1] = digits_7seg[secs % 10];
+          digits[2] = digits_7seg[centis / 10];
+          digits[3] = digits_7seg[centis % 10];
         } else {
-          uint16_t mins_left = real_secs_left / 60;
-          real_secs_left %= 60;
-          digits[0] = digits_7seg[mins_left / 10];
-          digits[1] = digits_7seg[mins_left % 10];
-          digits[2] = digits_7seg[real_secs_left / 10];
-          digits[3] = digits_7seg[real_secs_left % 10];
+          uint8_t mins = (uint8_t) (centis_left / 6000);
+          uint8_t secs = (uint8_t) (centis_left / 100 % 60);
+          digits[0] = digits_7seg[mins / 10];
+          digits[1] = digits_7seg[mins % 10];
+          digits[2] = digits_7seg[secs / 10];
+          digits[3] = digits_7seg[secs % 10];
         }
-        bool colon_on = centis_elapsed >= 50;
+        bool colon_on = centis_elapsed % 100 >= 50;
         for (uint8_t i = 0; i < 4; i++) {
           for (uint8_t j = 0; j < 7; j++) {
             matrix.set(i, j, (digits[i] >> j) & 1);

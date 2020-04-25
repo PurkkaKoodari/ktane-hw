@@ -1,0 +1,11 @@
+[GENERAL]
+extension-pkg-whitelist=smbus
+
+[FORMAT]
+max-line-length=120
+
+[MESSAGES CONTROL]
+disable=too-few-public-methods,missing-docstring,line-too-long,fixme
+
+[BASIC]
+good-names=id,ex,n,i,j,k

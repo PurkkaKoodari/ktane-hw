@@ -4,7 +4,10 @@ from collections import deque
 from concurrent.futures import Executor, Future
 from logging import getLogger
 from threading import Thread, RLock, Condition
-from typing import Any, Union, Callable, NamedTuple, Awaitable
+from typing import Any, Union, Callable, NamedTuple, Awaitable, Dict, TypeVar, Deque, Tuple, Sequence, Mapping
+
+K = TypeVar("K")
+V = TypeVar("V")
 
 
 class EventSource:
@@ -46,7 +49,7 @@ async def _call_event(callback, lock, event):
             lock.release()
 
 
-class Registry(dict):
+class Registry(Dict[K, V]):
     """A registry for registering classes.
 
     Nothing more but a glorified dict that provides the register() method.
@@ -90,6 +93,8 @@ class Ungettable(metaclass=UngettableMeta):
 
 
 class AuxiliaryThread(Thread, ABC):
+    _queue: Deque[Tuple[Callable, Sequence, Mapping, Future]]
+
     def __init__(self, *, name, **kwargs):
         super().__init__(name=name, daemon=True, **kwargs)
         self.logger = getLogger(self.name)
@@ -103,7 +108,7 @@ class AuxiliaryThread(Thread, ABC):
             self._run()
         except SystemExit:
             pass
-        except BaseException as ex:
+        except BaseException as ex:  # pylint: disable=broad-except
             self.logger.error("Uncaught %s in %s: %s", ex.__class__.__name__, self.name, ex, exc_info=True)
 
     def _get_task(self, timeout=None, process_all=False):
@@ -150,11 +155,18 @@ class AuxiliaryThreadExecutor(Executor, AuxiliaryThread):
             if task is None:
                 continue
             func, args, kwargs, future = task
-            try:
-                result = func(*args, **kwargs)
-                future.set_result(result)
-            except BaseException as ex:  # pylint: disable=broad-except
-                future.set_exception(ex)
+            self._run_task(func, args, kwargs, future)
+
+    @staticmethod
+    def _run_task(func, args, kwargs, future):
+        if not future.set_running_or_notify_cancel():
+            return
+        try:
+            result = func(*args, **kwargs)
+        except BaseException as ex:  # pylint: disable=broad-except
+            future.set_exception(ex)
+        else:
+            future.set_result(result)
 
 
 class FatalError(Exception):
@@ -172,7 +184,7 @@ class VersionNumber(NamedTuple):
 
 async def log_errors(awaitable: Awaitable):
     try:
-        await awaitable
+        return await awaitable
     except CancelledError:
         raise
     except BaseException as ex:

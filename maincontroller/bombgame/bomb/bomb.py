@@ -4,6 +4,7 @@ from logging import getLogger
 from time import monotonic
 from typing import List, Dict, Optional, Coroutine
 
+from bombgame.audio import load_sounds, register_sound, AudioLocation, stop_all_sounds, play_sound
 from bombgame.bomb.serial import BombSerial
 from bombgame.bomb.state import BombState
 from bombgame.bus.bus import BombBus
@@ -12,12 +13,12 @@ from bombgame.bus.messages import (BusMessage, ResetMessage, AnnounceMessage, De
 from bombgame.casings import Casing
 from bombgame.config import GAME_START_DELAY, MODULE_RESET_PERIOD, MODULE_ANNOUNCE_TIMEOUT, DEFAULT_MAX_STRIKES
 from bombgame.events import (BombErrorLevel, BombError, BombModuleAdded, ModuleStateChanged, BombStateChanged,
-                             ModuleStriked)
+                             ModuleStriked, TimerTick)
 from bombgame.gpio import AbstractGpio, ModuleReadyChange
 from bombgame.modules.base import ModuleState, Module
 from bombgame.modules.registry import MODULE_ID_REGISTRY
 from bombgame.modules.timer import TimerModule
-from bombgame.utils import EventSource
+from bombgame.utils import EventSource, log_errors
 
 LOGGER = getLogger("Bomb")
 
@@ -58,11 +59,12 @@ class Bomb(EventSource):
         self.time_left = 0.0
         self.timer_speed = 1.0
         self.widgets = []  # TODO fill and control these
-        self.serial_number = BombSerial(serial_number)  # TODO display this somewhere
+        self.serial_number = BombSerial.generate() if serial_number is None else BombSerial(serial_number)
         self._state = BombState.UNINITIALIZED
         self._init_location = None
         self._state_lock = Lock()
         self._init_cond = Condition(self._state_lock)
+        self._last_timer_update = 0.0
         self._running_tasks = []
         bus.add_listener(BusMessage, self._receive_message)
         gpio.add_listener(ModuleReadyChange, self._module_ready_change)
@@ -71,6 +73,7 @@ class Bomb(EventSource):
     async def initialize(self):
         if self._state != BombState.UNINITIALIZED:
             raise RuntimeError("Bomb already initialized")
+        stop_all_sounds()
         await self._state_lock.acquire()
         LOGGER.debug("Resetting all modules")
         self._state = BombState.RESETTING
@@ -108,6 +111,9 @@ class Bomb(EventSource):
             return
         # start pinging modules that have not sent anything in a while
         self.create_task(self._ping_loop())
+        # load sounds for the modules
+        # TODO do this in an auxiliary thread (but that will require us to move all audio stuff in said thread)
+        load_sounds({Bomb} | set(type(module) for module in self.modules))
         # wait for all modules to initialize
         if not all(module.state == ModuleState.CONFIGURATION for module in self.modules):
             LOGGER.debug("All modules recognized, waiting for initialization")
@@ -137,7 +143,7 @@ class Bomb(EventSource):
         Returns an ``asyncio.Task``. If you want to cancel this task yourself, pass it to ``Bomb.cancel_task``
         so that it can be removed from the bomb's task list.
         """
-        task = create_task(task)
+        task = create_task(log_errors(task))
         self._running_tasks.append(task)
         return task
 
@@ -151,10 +157,14 @@ class Bomb(EventSource):
             return
         if change.present:
             # TODO trigger hotswap initialization for the single module
-            self.trigger(BombError(None, BombErrorLevel.WARNING, f"A module was added at {self.casing.location(change.location)} after initialization started."))
+            self.trigger(BombError(None, BombErrorLevel.WARNING,
+                                   f"A module was added at {self.casing.location(change.location)} "
+                                   f"after initialization started."))
         elif self._state != BombState.INITIALIZING or (change.location != self._init_location and change.location not in self.modules_by_location):
             # TODO handle cases where a module becomes unready during initialization
-            self.trigger(BombError(None, BombErrorLevel.WARNING, f"A module was removed at {self.casing.location(change.location)} after initialization started."))
+            self.trigger(BombError(None, BombErrorLevel.WARNING,
+                                   f"A module was removed at {self.casing.location(change.location)} "
+                                   f"after initialization started."))
 
     def _init_fail(self, reason):
         self._state = BombState.INITIALIZATION_FAILED
@@ -162,12 +172,13 @@ class Bomb(EventSource):
 
     async def _receive_message(self, message: BusMessage):
         async with self._state_lock:
-            if self._state == BombState.UNINITIALIZED or self._state == BombState.RESETTING or self._state == BombState.DEINITIALIZED:
+            if self._state in (BombState.UNINITIALIZED, BombState.RESETTING, BombState.DEINITIALIZED):
                 return
             if isinstance(message, AnnounceMessage):
                 if self._state != BombState.INITIALIZING:
                     # TODO implement module hotswap
-                    self.trigger(BombError(None, BombErrorLevel.WARNING, f"{message.module} was announced after initialization."))
+                    self.trigger(BombError(None, BombErrorLevel.WARNING,
+                                           f"{message.module} was announced after initialization."))
                     return
                 if message.module in self.modules_by_bus_id:
                     self._init_fail(f"Multiple modules were announced with id {message.module}.")
@@ -175,7 +186,8 @@ class Bomb(EventSource):
                 if self._init_location is None:
                     self._init_fail(f"An unrequested announce was received from {message.module}.")
                     return
-                module = MODULE_ID_REGISTRY[message.module.type](self, message.module, self._init_location, message.hw_version, message.sw_version)
+                module_class = MODULE_ID_REGISTRY[message.module.type]
+                module = module_class(self, message.module, self._init_location, message.hw_version, message.sw_version)
                 if message.init_complete:
                     module.state = ModuleState.CONFIGURATION
                 self.modules_by_bus_id[message.module] = module
@@ -187,11 +199,13 @@ class Bomb(EventSource):
                 return
             module = self.modules_by_bus_id.get(message.module)
             if module is None:
-                self.trigger(BombError(None, BombErrorLevel.WARNING, f"Received {message.__class__.__name__} from unannounced module {message.module}."))
+                self.trigger(BombError(None, BombErrorLevel.WARNING, f"Received {message.__class__.__name__} from "
+                                                                     f"unannounced module {message.module}."))
                 return
             module.last_received = monotonic()
             if not await module.handle_message(message):
-                module.trigger_error(BombErrorLevel.WARNING, f"Received {message.__class__.__name__} in an invalid state.")
+                module.trigger_error(BombErrorLevel.WARNING, f"Received {message.__class__.__name__} in an "
+                                                             f"invalid state.")
 
     async def send(self, message: BusMessage):
         """Sends a message to the bus."""
@@ -218,9 +232,36 @@ class Bomb(EventSource):
         await self.send(LaunchGameMessage(ModuleId.BROADCAST))
         # TODO: add at least an option to manually do the starting from UI
         await async_sleep(GAME_START_DELAY)
+        if self._state != BombState.GAME_STARTING:
+            return
         self._state = BombState.GAME_STARTED
         self.trigger(BombStateChanged(BombState.GAME_STARTED))
         await self.send(StartTimerMessage(ModuleId.BROADCAST))
+        # timer task: trigger explosion and keep timer module in sync
+        self._last_timer_update = monotonic()
+        while self._state == BombState.GAME_STARTED:
+            expected_tick = (self.time_left % 1) / self.timer_speed
+            await async_sleep(expected_tick)
+            await self._update_time()
+
+    async def _update_time(self):
+        now = monotonic()
+        prev_second = int(self.time_left)
+        self.time_left -= (now - self._last_timer_update) * self.timer_speed
+        self.time_left = max(self.time_left, 0.0)
+        self._last_timer_update = now
+        curr_second = int(self.time_left)
+        if self.time_left == 0.0:
+            await self.explode()
+            return
+        if prev_second != curr_second:
+            self.trigger(TimerTick())
+            if self.timer_speed <= 1.0:
+                play_sound(TICK_SOUND_SLOW)
+            elif self.timer_speed <= 1.25:
+                play_sound(TICK_SOUND_MEDIUM)
+            else:
+                play_sound(TICK_SOUND_FAST)
 
     async def explode(self):
         """Ends the game by exploding the bomb."""
@@ -228,6 +269,8 @@ class Bomb(EventSource):
         self.trigger(BombStateChanged(BombState.EXPLODED))
         await self.send(ExplodeBombMessage(ModuleId.BROADCAST))
         # TODO: play sounds here; room-scale effects will react to the BombStateChanged event
+        stop_all_sounds()
+        play_sound(EXPLOSION_SOUND)
 
     async def _handle_module_state_change(self, _: ModuleStateChanged):
         async with self._state_lock:
@@ -251,7 +294,15 @@ class Bomb(EventSource):
             await self.explode()
             return True
         if self.strikes <= 4:
+            await self._update_time()
             self.timer_speed += 0.25
         self.trigger(ModuleStriked(module))
-        # TODO play strike sound
+        play_sound(STRIKE_SOUND)
         return False
+
+
+STRIKE_SOUND = register_sound(Bomb, "strike.wav", AudioLocation.BOMB_ONLY)
+EXPLOSION_SOUND = register_sound(Bomb, "explosion.wav", AudioLocation.PREFER_ROOM)
+TICK_SOUND_SLOW = register_sound(Bomb, "tick_1.0.wav", AudioLocation.BOMB_ONLY)
+TICK_SOUND_MEDIUM = register_sound(Bomb, "tick_1.25.wav", AudioLocation.BOMB_ONLY)
+TICK_SOUND_FAST = register_sound(Bomb, "tick_1.5.wav", AudioLocation.BOMB_ONLY)

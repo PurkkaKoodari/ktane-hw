@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from random import choice
-from typing import Optional
+from typing import Iterable
 
 LETTERS = "ABCDEFGHIJKLMNPQRSTUVWXZ"
 NUMBERS = "0123456789"
@@ -11,16 +13,17 @@ ODD = "13579"
 EVEN = "02468"
 
 
-def _generate_serial():
+def _generate_serial() -> str:
     return choice(BOTH) + choice(BOTH) + choice(NUMBERS) + choice(LETTERS) + choice(LETTERS) + choice(NUMBERS)
 
 
 class BombSerial(str):
-    def __new__(cls, serial: Optional[str] = None):
-        return str.__new__(cls, _generate_serial() if serial is None else serial)
+    @classmethod
+    def generate(cls) -> BombSerial:
+        return cls(_generate_serial())
 
-    def has(self, chars):
+    def has(self, chars: Iterable[str]) -> bool:
         return any(char in self for char in chars)
 
-    def last_is(self, chars):
+    def last_is(self, chars: Iterable[str]) -> bool:
         return self[5] in chars

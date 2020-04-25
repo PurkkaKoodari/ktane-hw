@@ -5,7 +5,7 @@ from logging import getLogger
 from os.path import dirname, realpath, join, exists
 from threading import current_thread
 from time import monotonic
-from typing import NamedTuple, Dict, List, Callable
+from typing import NamedTuple, Dict, List, Optional
 
 import pygame
 
@@ -29,15 +29,26 @@ def _check_pygame_thread():
         raise RuntimeError("attempting to call audio subsystem from wrong thread")
 
 
+class PlayingSound:
+    def __init__(self, channel: PlaybackChannel, play_id: int):
+        self._channel = channel
+        self._play_id = play_id
+
+    def stop(self):
+        _check_pygame_thread()
+        if self._channel.play_id == self._play_id:
+            self._channel.channel.stop()
+
+
 class PlaybackChannel:
-    def __init__(self, channel):
+    def __init__(self, channel: pygame.mixer.ChannelType):
         self.channel = channel
         self.priority = -1
         self.end = 0
         self.play_id = 0
         self.filename = None
 
-    def play(self, filename: str, priority: int):
+    def play(self, filename: str, priority: int) -> PlayingSound:
         try:
             sound = LOADED_SOUNDS[filename]
         except KeyError:
@@ -47,13 +58,7 @@ class PlaybackChannel:
         self.end = monotonic() + sound.get_length()
         self.priority = priority
         self.play_id += 1
-        play_id = self.play_id
-
-        def stopper():
-            _check_pygame_thread()
-            if self.play_id == play_id:
-                self.channel.stop()
-        return stopper
+        return PlayingSound(self, self.play_id)
 
 
 class AudioLocation(Enum):
@@ -67,23 +72,24 @@ class SoundSpec(NamedTuple):
     location: AudioLocation
 
 
-def register_sound(module_class: type, filename: str, location: AudioLocation) -> SoundSpec:
+def register_sound(owner_class: type, filename: str, location: AudioLocation) -> SoundSpec:
     path = join(SOUND_FOLDER, filename)
     if not exists(path):
         raise FileNotFoundError(f"sound file missing: {filename}")
-    module_sounds = SOUND_REGISTRY.setdefault(module_class, [])
+    module_sounds = SOUND_REGISTRY.setdefault(owner_class, [])
     sound = SoundSpec(filename, location)
     module_sounds.append(sound)
     return sound
 
 
-def load_sounds(module_classes):
-    LOGGER.info("Loading sounds for %d module classes", len(module_classes))
-    for module_class in module_classes:
-        for sound in SOUND_REGISTRY[module_class]:
+def load_sounds(classes):
+    _check_pygame_thread()
+    LOGGER.info("Loading sounds for %d classes", len(classes))
+    for module_class in classes:
+        for sound in SOUND_REGISTRY.get(module_class, []):
             if sound in LOADED_SOUNDS:
                 continue
-            if sound.location == AudioLocation.ROOM_ONLY or sound.location == AudioLocation.PREFER_ROOM and ROOM_AUDIO_ENABLED:
+            if sound.location == AudioLocation.ROOM_ONLY or sound.location == AudioLocation.PREFER_ROOM and ROOM_AUDIO_AVAILABLE:
                 LOGGER.debug("Skipping load of room-mode sound %s", sound.filename)
                 continue
             LOGGER.debug("Loading sound %s", sound.filename)
@@ -98,23 +104,23 @@ def initialize_local_playback():
         raise RuntimeError("local playback already initialized")
     _pygame_thread = current_thread()
     LOGGER.info("Initializing local audio playback")
-    pygame.mixer.init()
+    pygame.mixer.init(44100, -16, 2, 512)
     pygame.mixer.set_num_channels(AUDIO_CHANNELS)
     PLAYBACK_CHANNELS.clear()
     for ch in range(AUDIO_CHANNELS):
         PLAYBACK_CHANNELS.append(PlaybackChannel(pygame.mixer.Channel(ch)))
 
 
-def play_sound(sound: SoundSpec, priority: int = 0) -> Callable[[], None]:
+def play_sound(sound: SoundSpec, priority: int = 0) -> Optional[PlayingSound]:
     _check_pygame_thread()
     # check if we should play as room audio
     if sound.location in (AudioLocation.ROOM_ONLY, AudioLocation.PREFER_ROOM):
         if ROOM_AUDIO_AVAILABLE:
             # TODO play room audio here and return a stop handler
-            return lambda: None
+            return None
         if sound.location == AudioLocation.ROOM_ONLY:
             LOGGER.debug("Room audio unavailable, skipping room-only sound %s", sound.filename)
-            return lambda: None
+            return None
     # try to find a free channel
     channel = next((channel for channel in PLAYBACK_CHANNELS if not channel.channel.get_busy()), None)
     if not channel:
@@ -122,12 +128,17 @@ def play_sound(sound: SoundSpec, priority: int = 0) -> Callable[[], None]:
         channel = min(PLAYBACK_CHANNELS, key=lambda ch: (ch.priority, ch.end))
         if channel.priority > priority:
             LOGGER.warning("Out of channels, not playing priority %d audio %s", priority, sound.filename)
-            return lambda: None
+            return None
         LOGGER.warning("Out of channels, stopping priority %d audio %s with %s seconds left",
                        channel.priority, channel.filename, channel.end - monotonic())
     # play the sound
     LOGGER.debug("Playing priority %d audio %s", priority, sound.filename)
     return channel.play(sound.filename, priority)
+
+
+def stop_all_sounds():
+    for channel in PLAYBACK_CHANNELS:
+        channel.channel.stop()
 
 
 def get_channel_configuration():

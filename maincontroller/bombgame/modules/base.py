@@ -2,14 +2,20 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from enum import Enum
+from logging import getLogger
 from time import monotonic
-from typing import Tuple, List
+from typing import Tuple, List, TYPE_CHECKING
 
 from bombgame.bus.messages import (StrikeModuleMessage, SolveModuleMessage, ModuleId, ErrorMessage,
                                    RecoveredErrorMessage, PingMessage, BusMessage, InitCompleteMessage)
 from bombgame.config import MODULE_PING_INTERVAL, MODULE_PING_TIMEOUT
 from bombgame.events import BombError, BombErrorLevel, ModuleStateChanged
 from bombgame.utils import VersionNumber
+
+if TYPE_CHECKING:
+    from bombgame.bomb.bomb import Bomb
+
+PING_LOGGER = getLogger("ModulePing")
 
 DEFAULT_ERROR_DESCRIPTIONS = {
     0: "The module received an invalid message.",
@@ -30,23 +36,24 @@ class ModuleState(Enum):
 class Module(ABC):
     """The base class for modules."""
 
-    __slots__ = ("_bomb", "bus_id", "location", "hw_version", "sw_version", "last_received", "last_ping_sent",
-                 "ping_timeout", "state", "errors")
-
     is_needy = False
     is_boss = False
     must_solve = True
 
     errors: List[Tuple[int, BombError]]
 
-    def __init__(self, bomb, bus_id: ModuleId, location: int, hw_version: VersionNumber, sw_version: VersionNumber):
+    _bomb: Bomb
+
+    def __init__(self, bomb: Bomb, bus_id: ModuleId, location: int,
+                 hw_version: VersionNumber, sw_version: VersionNumber):
         self._bomb = bomb
         self.bus_id = bus_id
         self.location = location
         self.hw_version = hw_version
         self.sw_version = sw_version
         self.last_received = monotonic()
-        self.last_ping_sent = None
+        self.last_ping_time = None
+        self.last_ping_id = 0
         self.ping_timeout = False
         self.state = ModuleState.INITIALIZATION
         self.errors = []
@@ -68,13 +75,16 @@ class Module(ABC):
         occurred, ``True`` otherwise.
         """
         now = monotonic()
-        if not self.ping_timeout and self.last_ping_sent is not None and now > self.last_ping_sent + MODULE_PING_TIMEOUT:
+        if not self.ping_timeout and self.last_ping_time is not None and now > self.last_ping_time + MODULE_PING_TIMEOUT:
+            PING_LOGGER.warning("%s didn't respond to ping id %d.", self, self.last_ping_id)
             self.ping_timeout = True
             self.trigger_error(BombErrorLevel.WARNING, "Ping timeout.")
             return False
-        if self.last_ping_sent is None and now > self.last_received + MODULE_PING_INTERVAL:
-            self.last_ping_sent = monotonic()
-            await self._bomb.send(PingMessage(self.bus_id))
+        if self.last_ping_time is None and now > self.last_received + MODULE_PING_INTERVAL:
+            self.last_ping_time = monotonic()
+            self.last_ping_id = (self.last_ping_id + 1) & 0xFF
+            PING_LOGGER.debug("Sending ping id %d to %s.", self.last_ping_id, self)
+            await self._bomb.send(PingMessage(self.bus_id, number=self.last_ping_id))
         return True
 
     async def handle_message(self, message: BusMessage):
@@ -93,8 +103,11 @@ class Module(ABC):
             self.state = ModuleState.CONFIGURATION
             self._bomb.trigger(ModuleStateChanged(self))
             return True
-        if isinstance(message, PingMessage) and self.last_ping_sent is not None:
-            self.last_ping_sent = None
+        if isinstance(message, PingMessage):
+            if self.last_ping_time is not None and self.last_ping_id == message.number:
+                PING_LOGGER.debug("%s responded to ping id %d in %dms.",
+                                  self, self.last_ping_id, (monotonic() - self.last_ping_time) * 1000)
+                self.last_ping_time = None
             return True
         if isinstance(message, ErrorMessage):
             if isinstance(message, RecoveredErrorMessage):
@@ -135,7 +148,7 @@ class Module(ABC):
     async def strike(self, count=True):
         """Called by module code to record a strike on the module."""
         if count:
-            if await self._bomb.strike():
+            if await self._bomb.strike(self):
                 return True
             await self._bomb.send(StrikeModuleMessage(self.bus_id))
             return False

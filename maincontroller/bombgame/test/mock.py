@@ -145,7 +145,7 @@ class MockPhysicalModule(ABC, EventSource):
         if self.state == PhysicalModuleState.RESET:
             return
         if isinstance(message, PingMessage):
-            await self._bus.send(PingMessage(self.module_id, BusMessageDirection.IN))
+            await self._bus.send(PingMessage(self.module_id, BusMessageDirection.IN, number=message.number))
             return
         default_handled = False
         if isinstance(message, LaunchGameMessage):

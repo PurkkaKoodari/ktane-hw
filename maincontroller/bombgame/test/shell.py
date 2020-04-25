@@ -16,9 +16,9 @@ from asyncio import create_task, get_running_loop
 from logging import getLogger
 
 from bombgame.bus.bus import BombBus
-from bombgame.controller import init_logging, handle_fatal_error, handle_sigint, prepare_game, cleanup_game
+from bombgame.controller import init_logging, handle_fatal_error, handle_sigint, start_game, stop_game
 from bombgame.test.mock import MockGpio, MockPhysicalSimon, MockPhysicalTimer, mock_can_bus
-from bombgame.utils import FatalError
+from bombgame.utils import FatalError, log_errors
 
 LOGGER = getLogger("BombGameTest")
 
@@ -46,14 +46,14 @@ async def start_mock():
     simon = MockPhysicalSimon(mock_side_bus, gpio, 1)
     # initialize game with these
     controller_side_can = mock_can_bus()
-    _, _, bus, web_ui = await prepare_game(controller_side_can, gpio)
+    _, _, bus, web_ui = await start_game(controller_side_can, gpio)
 
     async def run_and_cleanup():
         await quit_evt.wait()
-        await cleanup_game(None, bus, web_ui)
+        await stop_game(None, None, bus, web_ui)
         mock_side_bus.stop()
         LOGGER.info("The game has exited. You can now exit with Ctrl-D/exit()")
-    create_task(run_and_cleanup())
+    create_task(log_errors(run_and_cleanup()))
 
     return {
         "timer": timer,
@@ -77,13 +77,13 @@ async def start_real():
     LOGGER.info("  web_ui - the Web UI for the game")
     LOGGER.info("  loop - the running event loop")
     quit_evt = handle_sigint()
-    can_bus, gpio, bus, web_ui = await prepare_game()
+    can_bus, gpio, bus, web_ui = await start_game()
 
     async def run_and_cleanup():
         await quit_evt.wait()
-        await cleanup_game(gpio, bus, web_ui)
+        await stop_game(can_bus, gpio, bus, web_ui)
         LOGGER.info("The game has exited. You can now exit with Ctrl-D/exit()")
-    create_task(run_and_cleanup())
+    create_task(log_errors(run_and_cleanup()))
 
     return {
         "bus": bus,

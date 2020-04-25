@@ -41,7 +41,8 @@ MODULE_RESET_PERIOD = 0.6
 # the time waited for a module to respond to the MODULE_ENABLE line
 MODULE_ANNOUNCE_TIMEOUT = 1.0
 # the time waited after a module's last message before pinging it
-MODULE_PING_INTERVAL = 1.0
+# set to slightly over 1s to avoid unnecessarily pinging the timer
+MODULE_PING_INTERVAL = 0.99  # TODO: 1.2
 # the time waited after sending a ping before causing a ping timeout error
 MODULE_PING_TIMEOUT = 1.0
 

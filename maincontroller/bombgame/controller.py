@@ -1,7 +1,8 @@
 from asyncio import run, Event
-from logging import getLogger, basicConfig as logConfig, INFO, DEBUG
+from logging import getLogger, INFO, DEBUG, StreamHandler, Formatter, LogRecord
 from signal import signal, SIGINT
 from sys import argv
+from typing import Optional, Tuple
 
 import can
 
@@ -15,14 +16,28 @@ from bombgame.web.server import WebInterface
 
 LOGGER = getLogger("BombGame")
 
+NOISY_EVENTS = {"PingMessage", "TimerTick"}
 
-def initialize_can():
+
+def filter_noisy_log(record: LogRecord):
+    if record.name == "EventSource" and len(record.args) >= 1 and type(record.args[0]).__name__ in NOISY_EVENTS:
+        return False
+    if record.name == "ModulePing" and record.levelno == DEBUG:
+        return False
+    return True
+
+
+def initialize_can() -> can.BusABC:
     getLogger("CANBus").info("Initializing CAN bus")
     return can.Bus(**CAN_CONFIG)
 
 
 def init_logging(verbose=False):
-    logConfig(format="%(asctime)s %(levelname)s [%(name)s] %(message)s", level=DEBUG if verbose else INFO)
+    handler = StreamHandler()
+    handler.addFilter(filter_noisy_log)
+    handler.setFormatter(Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s"))
+    getLogger().setLevel(DEBUG if verbose else INFO)
+    getLogger().addHandler(handler)
     if verbose:
         getLogger("websockets").setLevel(INFO)
         getLogger("can").setLevel(INFO)
@@ -39,7 +54,7 @@ def handle_sigint():
     return quit_evt
 
 
-async def prepare_game(can_bus=None, gpio=None):
+async def start_game(can_bus=None, gpio=None) -> Tuple[can.BusABC, Gpio, BombBus, WebInterface]:
     LOGGER.info("Loading modules")
     load_modules()
     if can_bus is None:
@@ -56,11 +71,13 @@ async def prepare_game(can_bus=None, gpio=None):
     return can_bus, gpio, bus, web_ui
 
 
-async def cleanup_game(gpio, bus, web_ui):
+async def stop_game(can_bus: Optional[can.BusABC], gpio: Optional[Gpio], bus: BombBus, web_ui: WebInterface):
     await web_ui.stop()
     bus.stop()
     if gpio is not None:
         gpio.stop()
+    if can_bus is not None:
+        can_bus.shutdown()
 
 
 async def main():
@@ -68,9 +85,9 @@ async def main():
     init_logging(verbose)
     LOGGER.info("Starting. Exit cleanly with SIGINT/Ctrl-C")
     quit_evt = handle_sigint()
-    can_bus, gpio, bus, web_ui = await prepare_game()
+    can_bus, gpio, bus, web_ui = await start_game()
     await quit_evt.wait()
-    await cleanup_game(gpio, bus, web_ui)
+    await stop_game(can_bus, gpio, bus, web_ui)
     LOGGER.info("Exiting")
 
 if __name__ == "__main__":

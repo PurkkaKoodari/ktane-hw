@@ -61,7 +61,7 @@
 .module.errorLevel_minor .errorIndicator {
     background: orangered;
 }
-.module.errorLevel_major {
+.module.errorLevel_major .errorIndicator {
     background: red;
 }
 .module.errorLevel_fatal {

@@ -118,8 +118,6 @@ MESSAGE_ID_REGISTRY = Registry("message_id")
 
 
 class BusMessage(ABC):
-    __slots__ = ("id", "module", "direction")
-
     message_id = Ungettable
 
     def __init__(self, id_: BusMessageId, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT):
@@ -218,8 +216,6 @@ class ModuleStatusMessage(StatusMessage):
 
 
 class ErrorMessage(StatusMessage):
-    __slots__ = ("code", "details")
-
     error_level = Ungettable
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *, code: int, details: bytes):
@@ -250,8 +246,6 @@ class AnnounceMessage(BusMessage):
     message_id = BusMessageId.ANNOUNCE
 
     FLAG_INIT_COMPLETE = 0x01
-
-    __slots__ = ("hw_version", "sw_version", "init_complete")
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
                  hw_version: VersionNumber, sw_version: VersionNumber, init_complete: bool):
@@ -284,8 +278,27 @@ class InitCompleteMessage(SimpleBusMessage):
 
 
 @MESSAGE_ID_REGISTRY.register
-class PingMessage(SimpleBusMessage):
+class PingMessage(BusMessage):
     message_id = BusMessageId.PING
+
+    def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *, number: int = 0):
+        super().__init__(self.__class__.message_id, module, direction)
+        if not 0 <= number <= 0xFF:
+            raise ValueError("ping number must be a byte")
+        self.number = number
+
+    @classmethod
+    def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes) -> BusMessage:
+        if len(data) > 1:
+            raise ValueError(f"{cls.__name__} must have 0 or 1 bytes of data")
+        number, = struct.unpack("<B", data) if data else (0,)
+        return cls(module, direction, number=number)
+
+    def _serialize_data(self) -> bytes:
+        return struct.pack("<B", self.number)
+
+    def _data_repr(self) -> str:
+        return f"id {self.number}"
 
 
 @MESSAGE_ID_REGISTRY.register

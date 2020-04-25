@@ -5,16 +5,12 @@ from typing import Optional
 class TimerTick:
     """The event raised when the bomb timer ticks."""
 
-    __slots__ = ()
-
     def __repr__(self):
         return f"<TimerTick>"
 
 
 class ModuleStriked:
     """The event raised when a strike occurs on a module."""
-
-    __slots__ = ("module",)
 
     def __init__(self, module):
         self.module = module
@@ -26,8 +22,6 @@ class ModuleStriked:
 class BombStateChanged:
     """The event raised when the bomb's state changes."""
 
-    __slots__ = ("state",)
-
     def __init__(self, state):
         self.state = state
 
@@ -38,8 +32,6 @@ class BombStateChanged:
 class BombModuleAdded:
     """The event raised when a module is added to a bomb."""
 
-    __slots__ = ("module",)
-
     def __init__(self, module):
         self.module = module
 
@@ -49,8 +41,6 @@ class BombModuleAdded:
 
 class ModuleStateChanged:
     """The event raised when a module's state changes in a way that would require an UI update."""
-
-    __slots__ = ("module",)
 
     def __init__(self, module):
         self.module = module
@@ -73,8 +63,6 @@ class BombErrorLevel(IntEnum):
 
 class BombError:
     """The event raised when an error occurs in the bomb or a module."""
-
-    __slots__ = ("module", "level", "details")
 
     def __init__(self, module: Optional, level: BombErrorLevel, details: str):
         self.module = module

@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import struct
 from enum import IntEnum
+from logging import getLogger
 from random import choice, randint, sample
+from typing import Sequence
 
+from bombgame.bomb.serial import ODD
+from bombgame.bomb.state import BombState
 from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
-from bombgame.modules.base import Module
+from bombgame.events import BombStateChanged, BombError, BombErrorLevel, ModuleStateChanged
+from bombgame.modules.base import Module, ModuleState
 from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
+
+LOGGER = getLogger("Wires")
 
 
 class WireColor(IntEnum):
@@ -75,16 +82,19 @@ class WiresModule(Module):
         self._wires = None
         self._slots = [None] * 6
         self._cut = [False] * 6
+        self._connected = [False] * 6
         self._solution = None
+        bomb.add_listener(BombStateChanged, self._handle_bomb_state)
 
     def generate(self):
+        last_odd = self._bomb.serial_number.last_is(ODD)
         count = randint(3, 6)
         self._wires = [choice(list(WireColor.__members__.values())) for _ in range(count)]
         indices = sample(range(6), count)
         for index, color in zip(indices, self._wires):
             self._slots[index] = color
         for condition, rule in RULES[count]:
-            if condition(self._wires):
+            if condition(self._wires, last_odd):
                 self._solution = rule(self._slots)
                 break
         else:
@@ -96,43 +106,61 @@ class WiresModule(Module):
     def ui_state(self):
         return {
             "wires": ["EMPTY" if wire is None else wire.name for wire in self._slots],
-            "cut": self._cut,
+            "connected": self._connected,
             "solutions": self._solution
         }
 
+    def _handle_bomb_state(self, event: BombStateChanged):
+        if event.state == BombState.GAME_STARTING:
+            bad_pos = [str(pos) for pos in range(6) if self._slots[pos] is not None and not self._connected[pos]]
+            if bad_pos:
+                self._bomb.trigger(BombError(self, BombErrorLevel.MAJOR,
+                                             f"The wires in positions {', '.join(bad_pos)} are not connected, "
+                                             f"making the module unsolvable."))
+
     async def handle_message(self, message: BusMessage):
-        if isinstance(message, WiresCutMessage):
-            self._cut[message.position] = True
-            if message.position == self._solution:
-                await self.defuse()
-            else:
-                await self.strike()
+        if isinstance(message, WiresSetPositionsMessage):
+            self._connected = [pos in message.positions for pos in range(6)]
+            if self.state in (ModuleState.GAME, ModuleState.DEFUSED):
+                for pos in range(6):
+                    if self._slots[pos] is not None and not self._cut[pos] and not self._connected[pos]:
+                        self._cut[pos] = True
+                        if pos == self._solution:
+                            LOGGER.info("Wire %s cut correctly", pos + 1)
+                            await self.defuse()
+                        else:
+                            LOGGER.info("Wire %s cut, expecting %s", pos + 1, self._solution + 1)
+                            await self.strike()
+            self._bomb.trigger(ModuleStateChanged(self))
             return True
         return await super().handle_message(message)
 
 
 @MODULE_MESSAGE_ID_REGISTRY.register
-class WiresCutMessage(BusMessage):
+class WiresSetPositionsMessage(BusMessage):
     message_id = (WiresModule, BusMessageId.MODULE_SPECIFIC_0)
 
-    __slots__ = ("position",)
+    positions: Sequence[int]
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 position: int):
+                 positions: Sequence[int]):
         super().__init__(self.__class__.message_id[1], module, direction)
-        if not 0 <= position <= 5:
-            raise ValueError("position must be between 0 and 5")
-        self.position = position
+        if len(positions) != len(set(positions)):
+            raise ValueError("positions must be unique")
+        if not all(0 <= position < 6 for position in positions):
+            raise ValueError("positions must be between 0 and 5")
+        self.positions = tuple(positions)
 
     @classmethod
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
         if len(data) != 1:
             raise ValueError(f"{cls.__name__} must have 1 byte of data")
-        position, = struct.unpack("<B", data)
-        return cls(module, direction, position=position)
+        bitfield, = struct.unpack("<B", data)
+        positions = [i for i in range(6) if bitfield & (1 << i)]
+        return cls(module, direction, positions=positions)
 
     def _serialize_data(self):
-        return struct.pack("<B", self.position)
+        return struct.pack("<B", sum(1 << position for position in self.positions))
 
     def _data_repr(self):
-        return f"position {self.position}"
+        return "connected: " + " ".join(str(position + 1) for position in sorted(self.positions))

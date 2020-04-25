@@ -118,7 +118,6 @@
             modules[data.location] = {
                 ...modules[data.location],
                 state: data.state,
-                error_level: data.error_level,
                 details: data.details
             }
             updateModuleElem(modules[data.location], moduleElems[data.location])

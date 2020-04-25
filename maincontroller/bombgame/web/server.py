@@ -14,7 +14,7 @@ from bombgame.config import BOMB_CASING, WEB_WS_PORT, WEB_UI_VERSION, WEB_PASSWO
 from bombgame.events import BombError, BombModuleAdded, BombStateChanged, ModuleStateChanged
 from bombgame.gpio import Gpio
 from bombgame.modules.base import Module
-from bombgame.utils import EventSource, Registry, Ungettable
+from bombgame.utils import EventSource, Registry, Ungettable, log_errors
 
 MESSAGE_TYPE_REGISTRY = Registry("message_type")
 
@@ -106,6 +106,16 @@ class UnpauseGameMessage(WebInterfaceMessage):
 
 
 @MESSAGE_TYPE_REGISTRY.register
+class BombInfoMessage(WebInterfaceMessage):
+    message_type = "bomb"
+    fields = {"serial_number": str}
+
+    def __init__(self, serial_number: str):
+        super().__init__()
+        self.serial_number = serial_number
+
+
+@MESSAGE_TYPE_REGISTRY.register
 class StateMessage(WebInterfaceMessage):
     message_type = "state"
     fields = {"state": str}
@@ -181,8 +191,6 @@ async def _receive(client: WebSocketServerProtocol):
 
 
 class WebInterface(EventSource):
-    __slots__ = ("_bus", "_gpio", "_bomb", "_serve_task", "_server", "_client")
-
     _serve_task: Optional[Task]
     _server: Optional[WebSocketServer]
     _client: Optional[WebSocketServerProtocol]
@@ -226,9 +234,10 @@ class WebInterface(EventSource):
                     await _invalid_message(client, "password is incorrect", 4003)
             # TODO send current state
             await self._send_to_client(ConfigMessage({}), client)
+            await self._send_to_client(BombInfoMessage(self._bomb.serial_number), client)
             for module in self._bomb.modules:
                 await self._send_module(module, client)
-            await self._send_to_client(StateMessage("unknown"), client)
+            await self._send_to_client(StateMessage(self._bomb._state.name), client)
         except ConnectionClosed:
             return
         old_client = self._client
@@ -245,8 +254,8 @@ class WebInterface(EventSource):
 
     async def _handle_message(self, client, message):
         if isinstance(message, ResetMessage):
-            self._bomb.deinitialize()
-            create_task(self._initialize_bomb())
+            self._deinitialize_bomb()
+            create_task(log_errors(self._initialize_bomb()))
         elif isinstance(message, ConfigMessage):
             # TODO
             await _invalid_message(client, "config not implemented")
@@ -286,6 +295,7 @@ class WebInterface(EventSource):
     async def _initialize_bomb(self):
         await self._send_to_client(ResetMessage())
         self._bomb = Bomb(self._bus, self._gpio, BOMB_CASING)
+        await self._send_to_client(BombInfoMessage(self._bomb.serial_number))
         self._bomb.add_listener(BombModuleAdded, self._handle_module_add)
         self._bomb.add_listener(BombStateChanged, self._handle_bomb_state)
         self._bomb.add_listener(ModuleStateChanged, self._handle_module_update)
@@ -306,7 +316,7 @@ class WebInterface(EventSource):
             raise RuntimeError("web interface already running")
         LOGGER.info("Starting Web UI")
         self._server = await serve(self._handle_client, port=WEB_WS_PORT)
-        create_task(self._initialize_bomb())
+        create_task(log_errors(self._initialize_bomb()))
 
     async def stop(self):
         if self._server is None:

@@ -119,14 +119,14 @@ X Pin_9 9 -200 300 150 R 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
-# Connector_RJ45_LED
+# Connector_RJ45_LED_Shielded
 #
-DEF Connector_RJ45_LED J 0 40 Y Y 1 F N
+DEF Connector_RJ45_LED_Shielded J 0 40 Y Y 1 F N
 F0 "J" -200 550 50 H V R CNN
-F1 "Connector_RJ45_LED" 50 550 50 H V L CNN
+F1 "Connector_RJ45_LED_Shielded" 50 550 50 H V L CNN
 F2 "" 0 25 50 V I C CNN
 F3 "" 0 25 50 V I C CNN
-ALIAS RJ45_LED
+ALIAS RJ45_LED_Shielded
 $FPLIST
  8P8C*
  RJ45*
@@ -174,6 +174,7 @@ X ~ 6 400 200 100 L 50 50 1 1 P
 X ~ 7 400 300 100 L 50 50 1 1 P
 X ~ 8 400 400 100 L 50 50 1 1 P
 X ~ 9 -400 400 100 R 50 50 1 1 P
+X ~ SH 0 -500 100 U 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
@@ -356,10 +357,10 @@ F2 "" 0 0 50 H I C CNN
 F3 "" 0 0 50 H I C CNN
 DRAW
 S -300 -200 300 -1200 0 1 0 f
-X NC J1_1 500 -1050 200 L 50 50 1 1 N
-X NC J1_2 500 -1150 200 L 50 50 1 1 N
-X CAN_H J3_1 500 -300 200 L 50 50 1 1 B
-X CAN_L J3_2 500 -400 200 L 50 50 1 1 B
+X TERM_H J1_1 500 -1000 200 L 50 50 1 1 B
+X TERM_L J1_2 500 -1100 200 L 50 50 1 1 B
+X CAN_L J3_1 500 -300 200 L 50 50 1 1 B
+X CAN_H J3_2 500 -400 200 L 50 50 1 1 B
 X INT J4_1 -500 -300 200 R 50 50 1 1 I
 X SCK J4_2 -500 -400 200 R 50 50 1 1 I
 X MOSI J4_3 -500 -500 200 R 50 50 1 1 I
@@ -370,11 +371,11 @@ X VCC J4_7 -500 -1100 200 R 50 50 1 1 W
 ENDDRAW
 ENDDEF
 #
-# korttipohja-rescue_Arduino_Nano_v3.x-MCU_Module
+# module_base-rescue_Arduino_Nano_v3.x-MCU_Module
 #
-DEF korttipohja-rescue_Arduino_Nano_v3.x-MCU_Module A 0 20 Y Y 1 F N
+DEF module_base-rescue_Arduino_Nano_v3.x-MCU_Module A 0 20 Y Y 1 F N
 F0 "A" -200 1025 50 H V R CNN
-F1 "korttipohja-rescue_Arduino_Nano_v3.x-MCU_Module" -200 950 50 H V R CNN
+F1 "module_base-rescue_Arduino_Nano_v3.x-MCU_Module" -200 950 50 H V R CNN
 F2 "Module:Arduino_Nano" 150 -950 50 H I L CNN
 F3 "" 0 -1000 50 H I C CNN
 $FPLIST

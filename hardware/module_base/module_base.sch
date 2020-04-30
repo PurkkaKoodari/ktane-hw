@@ -984,4 +984,64 @@ F 3 "http://www.holtek.com/documents/10179/116711/HT1632Cv170.pdf" V 2950 6000 5
 	1    3150 5950
 	1    0    0    -1  
 $EndComp
+$Comp
+L Device:R_Small R3
+U 1 1 5ECD8FF2
+P 7200 2600
+F 0 "R3" H 7259 2646 50  0000 L CNN
+F 1 "4K7" H 7259 2555 50  0000 L CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 7200 2600 50  0001 C CNN
+F 3 "~" H 7200 2600 50  0001 C CNN
+	1    7200 2600
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R_Small R4
+U 1 1 5ECD99DE
+P 7500 2600
+F 0 "R4" H 7559 2646 50  0000 L CNN
+F 1 "4K7" H 7559 2555 50  0000 L CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" H 7500 2600 50  0001 C CNN
+F 3 "~" H 7500 2600 50  0001 C CNN
+	1    7500 2600
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:VCC #PWR0113
+U 1 1 5ECD9D82
+P 7200 2850
+F 0 "#PWR0113" H 7200 2700 50  0001 C CNN
+F 1 "VCC" H 7218 3023 50  0000 C CNN
+F 2 "" H 7200 2850 50  0001 C CNN
+F 3 "" H 7200 2850 50  0001 C CNN
+	1    7200 2850
+	-1   0    0    1   
+$EndComp
+$Comp
+L power:VCC #PWR0114
+U 1 1 5ECDA344
+P 7500 2850
+F 0 "#PWR0114" H 7500 2700 50  0001 C CNN
+F 1 "VCC" H 7518 3023 50  0000 C CNN
+F 2 "" H 7500 2850 50  0001 C CNN
+F 3 "" H 7500 2850 50  0001 C CNN
+	1    7500 2850
+	-1   0    0    1   
+$EndComp
+Wire Wire Line
+	7500 2850 7500 2700
+Wire Wire Line
+	7200 2700 7200 2850
+Text GLabel 7050 2300 0    50   Input ~ 0
+A4_SDA
+Text GLabel 7650 2300 2    50   Input ~ 0
+A5_SCL
+Wire Wire Line
+	7050 2300 7200 2300
+Wire Wire Line
+	7200 2300 7200 2500
+Wire Wire Line
+	7500 2500 7500 2300
+Wire Wire Line
+	7500 2300 7650 2300
 $EndSCHEMATC

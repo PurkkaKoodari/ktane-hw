@@ -34,7 +34,7 @@
   )
 
   (setup
-    (last_trace_width 0.35)
+    (last_trace_width 0.25)
     (user_trace_width 0.35)
     (user_trace_width 0.5)
     (user_trace_width 1)
@@ -719,7 +719,7 @@
     (at 125.1852 97.6884)
     (descr "Resistor SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC_7351 nominal with elongated pad for handsoldering. (Body size source: http://www.tortai-tech.com/upload/download/2011102023233369053.pdf), generated with kicad-footprint-generator")
     (tags "resistor handsolder")
-    (path /5EF969E2/5F2CBDD8)
+    (path /5ECD99DE)
     (attr smd)
     (fp_text reference R4 (at 0 1.524) (layer F.SilkS)
       (effects (font (size 1 1) (thickness 0.15)))
@@ -755,7 +755,7 @@
     (at 121.1948 95.1992 180)
     (descr "Resistor SMD 0603 (1608 Metric), square (rectangular) end terminal, IPC_7351 nominal with elongated pad for handsoldering. (Body size source: http://www.tortai-tech.com/upload/download/2011102023233369053.pdf), generated with kicad-footprint-generator")
     (tags "resistor handsolder")
-    (path /5EF969E2/5F2CBDDE)
+    (path /5ECD8FF2)
     (attr smd)
     (fp_text reference R3 (at 0 -1.43) (layer F.SilkS)
       (effects (font (size 1 1) (thickness 0.15)))

@@ -1,4 +1,4 @@
-update=1.5.2020 1.36.16
+update=1.5.2020 4.39.16
 version=1
 last_client=kicad
 [general]

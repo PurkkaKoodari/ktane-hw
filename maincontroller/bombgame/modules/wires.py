@@ -120,17 +120,19 @@ class WiresModule(Module):
 
     async def handle_message(self, message: BusMessage):
         if isinstance(message, WiresSetPositionsMessage):
+            was_connected = self._connected
             self._connected = [pos in message.positions for pos in range(6)]
             if self.state in (ModuleState.GAME, ModuleState.DEFUSED):
                 for pos in range(6):
-                    if self._slots[pos] is not None and not self._cut[pos] and not self._connected[pos]:
+                    if self._slots[pos] is not None and not self._cut[pos] and was_connected[pos] and not self._connected[pos]:
                         self._cut[pos] = True
                         if pos == self._solution:
                             LOGGER.info("Wire %s cut correctly", pos + 1)
                             await self.defuse()
                         else:
                             LOGGER.info("Wire %s cut, expecting %s", pos + 1, self._solution + 1)
-                            await self.strike()
+                            if await self.strike():
+                                return
             self._bomb.trigger(ModuleStateChanged(self))
             return True
         return await super().handle_message(message)

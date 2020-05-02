@@ -268,7 +268,6 @@ class Bomb(EventSource):
         self._state = BombState.EXPLODED
         self.trigger(BombStateChanged(BombState.EXPLODED))
         await self.send(ExplodeBombMessage(ModuleId.BROADCAST))
-        # TODO: play sounds here; room-scale effects will react to the BombStateChanged event
         stop_all_sounds()
         play_sound(EXPLOSION_SOUND)
 

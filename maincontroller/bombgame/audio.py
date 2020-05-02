@@ -94,7 +94,11 @@ def load_sounds(classes):
                 continue
             LOGGER.debug("Loading sound %s", sound.filename)
             path = join(SOUND_FOLDER, sound.filename)
-            LOADED_SOUNDS[sound.filename] = pygame.mixer.Sound(path)
+            sound_obj = pygame.mixer.Sound(path)
+            # avoid sound distortion by capping volume
+            # doing this here ensures that no clipping occurs in pygame/SDL mixer and allows us to ignore system volume
+            sound_obj.set_volume(0.25)
+            LOADED_SOUNDS[sound.filename] = sound_obj
     LOGGER.info("%d sounds now loaded", len(LOADED_SOUNDS))
 
 

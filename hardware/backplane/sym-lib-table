@@ -1,3 +1,4 @@
 (sym_lib_table
-  (lib (name backplane-rescue)(type Legacy)(uri ${KIPRJMOD}/backplane-rescue.lib)(options "")(descr ""))
+  (lib (name WAVGAT_CAN)(type Legacy)(uri "${KIPRJMOD}/../symbols/WAVGAT CAN/WAVGAT_CAN.lib")(options "")(descr ""))
+  (lib (name ProjectChips)(type Legacy)(uri ${KIPRJMOD}/../symbols/ProjectChips/ProjectChips.lib)(options "")(descr ""))
 )

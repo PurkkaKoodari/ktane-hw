@@ -1,3 +1,4 @@
 (fp_lib_table
   (lib (name WAVGAT_CAN)(type KiCad)(uri "${KIPRJMOD}/../symbols/WAVGAT CAN/WAVGAT_CAN.pretty")(options "")(descr ""))
+  (lib (name RJ45_5224)(type KiCad)(uri ${KIPRJMOD}/../symbols/RJ45_5224/RJ45_5224.pretty)(options "")(descr ""))
 )

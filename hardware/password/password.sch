@@ -374,34 +374,12 @@ F 3 "~" H 4550 10500 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	4150 10500 4250 10500
-$Comp
-L power:VCC #PWR014
-U 1 1 5E626A27
-P 2950 6950
-F 0 "#PWR014" H 2950 6800 50  0001 C CNN
-F 1 "VCC" V 2967 7078 50  0000 L CNN
-F 2 "" H 2950 6950 50  0001 C CNN
-F 3 "" H 2950 6950 50  0001 C CNN
-	1    2950 6950
-	0    1    1    0   
-$EndComp
 Wire Wire Line
 	4850 10500 4850 9950
 Connection ~ 4850 9950
 Wire Wire Line
 	1850 9050 2150 9050
 Connection ~ 4150 9050
-$Comp
-L Device:LED_RGBA D8
-U 1 1 5E8061C6
-P 2600 6950
-F 0 "D8" H 2600 7447 50  0000 C CNN
-F 1 "LED_RGBA" H 2600 7356 50  0000 C CNN
-F 2 "LED_THT:LED_D5.0mm-4_RGB_Wide_Pins" H 2600 6900 50  0001 C CNN
-F 3 "~" H 2600 6900 50  0001 C CNN
-	1    2600 6950
-	1    0    0    -1  
-$EndComp
 $Sheet
 S 1050 1000 2150 250 
 U 5F72C2C1
@@ -586,39 +564,6 @@ Wire Wire Line
 Wire Wire Line
 	4800 6550 4800 5950
 Connection ~ 4800 5950
-Wire Wire Line
-	2400 6750 2250 6750
-Wire Wire Line
-	2250 6950 2400 6950
-$Comp
-L Device:R R28
-U 1 1 5FF4334D
-P 2100 6750
-F 0 "R28" V 1900 6700 50  0000 L CNN
-F 1 "220R" V 2000 6650 50  0000 L CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 2030 6750 50  0001 C CNN
-F 3 "~" H 2100 6750 50  0001 C CNN
-	1    2100 6750
-	0    1    1    0   
-$EndComp
-$Comp
-L Device:R R29
-U 1 1 5FF44364
-P 2100 6950
-F 0 "R29" V 2300 6900 50  0000 L CNN
-F 1 "220R" V 2200 6850 50  0000 L CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 2030 6950 50  0001 C CNN
-F 3 "~" H 2100 6950 50  0001 C CNN
-	1    2100 6950
-	0    1    1    0   
-$EndComp
-Wire Wire Line
-	1750 6950 1950 6950
-Wire Wire Line
-	1950 6750 1750 6750
-NoConn ~ 2400 7150
-Wire Wire Line
-	2950 6950 2800 6950
 Text GLabel 12200 2650 2    50   Input ~ 0
 D5
 Text GLabel 12200 2750 2    50   Input ~ 0
@@ -748,10 +693,6 @@ Wire Wire Line
 	3250 7800 3250 8500
 Text GLabel 4150 10500 0    50   Input ~ 0
 A6
-Text GLabel 1750 6950 0    50   Input ~ 0
-A1
-Text GLabel 1750 6750 0    50   Input ~ 0
-A0
 Wire Wire Line
 	2450 8150 2950 8150
 Connection ~ 2950 8150
@@ -1491,4 +1432,64 @@ Wire Wire Line
 Connection ~ 6850 3100
 Wire Wire Line
 	6250 3100 6850 3100
+Text GLabel 1700 6950 0    50   Input ~ 0
+A0
+Text GLabel 1700 6750 0    50   Input ~ 0
+A1
+Wire Wire Line
+	1900 6750 1700 6750
+Wire Wire Line
+	1700 6950 1900 6950
+$Comp
+L Device:R R28
+U 1 1 5F759493
+P 2050 6950
+F 0 "R28" V 2250 6900 50  0000 L CNN
+F 1 "220R" V 2150 6850 50  0000 L CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1980 6950 50  0001 C CNN
+F 3 "~" H 2050 6950 50  0001 C CNN
+	1    2050 6950
+	0    1    1    0   
+$EndComp
+$Comp
+L Device:R R29
+U 1 1 5F75948D
+P 2050 6750
+F 0 "R29" V 1850 6700 50  0000 L CNN
+F 1 "220R" V 1950 6650 50  0000 L CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1980 6750 50  0001 C CNN
+F 3 "~" H 2050 6750 50  0001 C CNN
+	1    2050 6750
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	2200 6950 2350 6950
+Wire Wire Line
+	2350 6750 2200 6750
+Wire Wire Line
+	2950 6750 2950 6900
+Wire Wire Line
+	2750 6750 2950 6750
+$Comp
+L power:GND #PWR?
+U 1 1 5F73BAE5
+P 2950 6900
+F 0 "#PWR?" H 2950 6650 50  0001 C CNN
+F 1 "GND" H 2955 6727 50  0000 C CNN
+F 2 "" H 2950 6900 50  0001 C CNN
+F 3 "" H 2950 6900 50  0001 C CNN
+	1    2950 6900
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:LED_RCGB D8
+U 1 1 5F7036D4
+P 2550 6750
+F 0 "D8" H 2550 6283 50  0000 C CNN
+F 1 "LED_RCGB" H 2550 6374 50  0000 C CNN
+F 2 "LED_THT:LED_D5.0mm-4_RGB_Wide_Pins" H 2550 6700 50  0001 C CNN
+F 3 "~" H 2550 6700 50  0001 C CNN
+	1    2550 6750
+	-1   0    0    1   
+$EndComp
 $EndSCHEMATC

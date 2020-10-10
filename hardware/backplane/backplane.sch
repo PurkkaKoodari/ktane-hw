@@ -21,6 +21,7 @@ F 0 "J3" H 6150 8867 50  0000 C CNN
 F 1 "RJ45" H 6150 8776 50  0000 C CNN
 F 2 "RJ45_5224:RJ45_5224" V 6150 8225 50  0001 C CNN
 F 3 "~" V 6150 8225 50  0001 C CNN
+F 4 "IO" H 6150 8200 50  0001 C CNN "Section"
 	1    6150 8200
 	1    0    0    -1  
 $EndComp
@@ -60,6 +61,7 @@ F 0 "J1" H 2300 4281 50  0000 C CNN
 F 1 "Raspberry_Pi_2_3" H 2300 4190 50  0000 C CNN
 F 2 "Connector_PinSocket_2.54mm:PinSocket_2x20_P2.54mm_Vertical" H 2300 2800 50  0001 C CNN
 F 3 "https://www.raspberrypi.org/documentation/hardware/raspberrypi/schematics/rpi_SCH_3bplus_1p0_reduced.pdf" H 2300 2800 50  0001 C CNN
+F 4 "RaspberryPi" H 2300 2800 50  0001 C CNN "Section"
 	1    2300 2800
 	1    0    0    -1  
 $EndComp
@@ -162,6 +164,7 @@ F 0 "R10" H 2670 10346 50  0000 L CNN
 F 1 "4K7" H 2670 10255 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 2530 10300 50  0001 C CNN
 F 3 "~" H 2600 10300 50  0001 C CNN
+F 4 "IO" H 2600 10300 50  0001 C CNN "Section"
 	1    2600 10300
 	1    0    0    -1  
 $EndComp
@@ -173,6 +176,7 @@ F 0 "R9" H 2420 10346 50  0000 L CNN
 F 1 "4K7" H 2420 10255 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 2280 10300 50  0001 C CNN
 F 3 "~" H 2350 10300 50  0001 C CNN
+F 4 "IO" H 2350 10300 50  0001 C CNN "Section"
 	1    2350 10300
 	1    0    0    -1  
 $EndComp
@@ -184,6 +188,7 @@ F 0 "R7" H 2170 10346 50  0000 L CNN
 F 1 "4K7" H 2170 10255 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 2030 10300 50  0001 C CNN
 F 3 "~" H 2100 10300 50  0001 C CNN
+F 4 "IO" H 2100 10300 50  0001 C CNN "Section"
 	1    2100 10300
 	1    0    0    -1  
 $EndComp
@@ -195,6 +200,7 @@ F 0 "R5" H 1920 10346 50  0000 L CNN
 F 1 "4K7" H 1920 10255 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1780 10300 50  0001 C CNN
 F 3 "~" H 1850 10300 50  0001 C CNN
+F 4 "IO" H 1850 10300 50  0001 C CNN "Section"
 	1    1850 10300
 	1    0    0    -1  
 $EndComp
@@ -206,6 +212,7 @@ F 0 "R3" H 1670 10346 50  0000 L CNN
 F 1 "4K7" H 1670 10255 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1530 10300 50  0001 C CNN
 F 3 "~" H 1600 10300 50  0001 C CNN
+F 4 "IO" H 1600 10300 50  0001 C CNN "Section"
 	1    1600 10300
 	1    0    0    -1  
 $EndComp
@@ -217,6 +224,7 @@ F 0 "R2" H 1420 10346 50  0000 L CNN
 F 1 "4K7" H 1420 10255 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1280 10300 50  0001 C CNN
 F 3 "~" H 1350 10300 50  0001 C CNN
+F 4 "IO" H 1350 10300 50  0001 C CNN "Section"
 	1    1350 10300
 	1    0    0    -1  
 $EndComp
@@ -307,6 +315,7 @@ F 0 "R8" V 2250 9300 50  0000 C CNN
 F 1 "4K7" V 2450 9300 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 2280 9300 50  0001 C CNN
 F 3 "~" H 2350 9300 50  0001 C CNN
+F 4 "IO" H 2350 9300 50  0001 C CNN "Section"
 	1    2350 9300
 	0    1    1    0   
 $EndComp
@@ -333,6 +342,7 @@ F 0 "C1" V 2798 8100 50  0000 C CNN
 F 1 "100n" V 2889 8100 50  0000 C CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 3088 7950 50  0001 C CNN
 F 3 "~" H 3050 8100 50  0001 C CNN
+F 4 "IO" H 3050 8100 50  0001 C CNN "Section"
 	1    3050 8100
 	0    1    1    0   
 $EndComp
@@ -357,6 +367,7 @@ F 0 "U2" H 6450 3550 50  0000 C CNN
 F 1 "MCP2515-xSO" H 6450 3450 50  0000 C CNN
 F 2 "Package_SO:SOIC-18W_7.5x11.6mm_P1.27mm" H 6150 1800 50  0001 C CIN
 F 3 "http://ww1.microchip.com/downloads/en/DeviceDoc/21801e.pdf" H 6250 1900 50  0001 C CNN
+F 4 "CanModule" H 6150 2700 50  0001 C CNN "Section"
 	1    6150 2700
 	1    0    0    -1  
 $EndComp
@@ -392,6 +403,7 @@ F 0 "J7" H 10930 8092 50  0000 L CNN
 F 1 "Screw_Terminal_01x03" H 10930 8001 50  0000 L CNN
 F 2 "TerminalBlock_Phoenix:TerminalBlock_Phoenix_PT-1,5-3-5.0-H_1x03_P5.00mm_Horizontal" H 10850 8050 50  0001 C CNN
 F 3 "~" H 10850 8050 50  0001 C CNN
+F 4 "PowerInput" H 10850 8050 50  0001 C CNN "Section"
 	1    10850 8050
 	1    0    0    -1  
 $EndComp
@@ -477,6 +489,7 @@ F 0 "C5" V 9198 1600 50  0000 C CNN
 F 1 "100n" V 9289 1600 50  0000 C CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 9488 1450 50  0001 C CNN
 F 3 "~" H 9450 1600 50  0001 C CNN
+F 4 "CanModule" H 9450 1600 50  0001 C CNN "Section"
 	1    9450 1600
 	0    1    1    0   
 $EndComp
@@ -675,6 +688,7 @@ F 0 "Y1" V 5054 3081 50  0000 L CNN
 F 1 "8MHz" V 5145 3081 50  0000 L CNN
 F 2 "Crystal:Crystal_HC49-U_Vertical" H 5100 2950 50  0001 C CNN
 F 3 "~" H 5100 2950 50  0001 C CNN
+F 4 "CanModule" H 5100 2950 50  0001 C CNN "Section"
 	1    5100 2950
 	0    1    1    0   
 $EndComp
@@ -698,6 +712,7 @@ F 0 "C2" V 4498 2800 50  0000 C CNN
 F 1 "22p" V 4589 2800 50  0000 C CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 4788 2650 50  0001 C CNN
 F 3 "~" H 4750 2800 50  0001 C CNN
+F 4 "CanModule" H 4750 2800 50  0001 C CNN "Section"
 	1    4750 2800
 	0    1    1    0   
 $EndComp
@@ -709,6 +724,7 @@ F 0 "C3" V 4900 3100 50  0000 C CNN
 F 1 "22p" V 5000 3100 50  0000 C CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 4788 2950 50  0001 C CNN
 F 3 "~" H 4750 3100 50  0001 C CNN
+F 4 "CanModule" H 4750 3100 50  0001 C CNN "Section"
 	1    4750 3100
 	0    1    1    0   
 $EndComp
@@ -748,6 +764,7 @@ F 0 "J5" H 8000 8917 50  0000 C CNN
 F 1 "RJ45" H 8000 8826 50  0000 C CNN
 F 2 "RJ45_5224:RJ45_5224" V 8000 8275 50  0001 C CNN
 F 3 "~" V 8000 8275 50  0001 C CNN
+F 4 "IO" H 8000 8250 50  0001 C CNN "Section"
 	1    8000 8250
 	1    0    0    -1  
 $EndComp
@@ -840,6 +857,7 @@ F 0 "J4" H 6150 10617 50  0000 C CNN
 F 1 "RJ45" H 6150 10526 50  0000 C CNN
 F 2 "RJ45_5224:RJ45_5224" V 6150 9975 50  0001 C CNN
 F 3 "~" V 6150 9975 50  0001 C CNN
+F 4 "IO" H 6150 9950 50  0001 C CNN "Section"
 	1    6150 9950
 	1    0    0    -1  
 $EndComp
@@ -932,6 +950,7 @@ F 0 "J6" H 8000 10667 50  0000 C CNN
 F 1 "RJ45" H 8000 10576 50  0000 C CNN
 F 2 "RJ45_5224:RJ45_5224" V 8000 10025 50  0001 C CNN
 F 3 "~" V 8000 10025 50  0001 C CNN
+F 4 "IO" H 8000 10000 50  0001 C CNN "Section"
 	1    8000 10000
 	1    0    0    -1  
 $EndComp
@@ -1028,6 +1047,7 @@ F 0 "R14" V 6850 3300 50  0000 C CNN
 F 1 "10k" V 6950 3300 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 6980 3300 50  0001 C CNN
 F 3 "~" H 7050 3300 50  0001 C CNN
+F 4 "CanModule" H 7050 3300 50  0001 C CNN "Section"
 	1    7050 3300
 	0    1    1    0   
 $EndComp
@@ -1061,6 +1081,7 @@ F 0 "U1" H 3550 10481 50  0000 C CNN
 F 1 "MCP23017_SO" H 3550 10390 50  0000 C CNN
 F 2 "Package_SO:SOIC-28W_7.5x17.9mm_P1.27mm" H 3750 8200 50  0001 L CNN
 F 3 "http://ww1.microchip.com/downloads/en/DeviceDoc/20001952C.pdf" H 3750 8100 50  0001 L CNN
+F 4 "IO" H 3550 9200 50  0001 C CNN "Section"
 	1    3550 9200
 	1    0    0    -1  
 $EndComp
@@ -1120,6 +1141,7 @@ F 0 "C4" V 5598 1700 50  0000 C CNN
 F 1 "100n" V 5689 1700 50  0000 C CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 5888 1550 50  0001 C CNN
 F 3 "~" H 5850 1700 50  0001 C CNN
+F 4 "CanModule" H 5850 1700 50  0001 C CNN "Section"
 	1    5850 1700
 	0    1    1    0   
 $EndComp
@@ -1195,6 +1217,7 @@ F 0 "R12" H 3720 6146 50  0000 L CNN
 F 1 "10k" H 3720 6055 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 3580 6100 50  0001 C CNN
 F 3 "~" H 3650 6100 50  0001 C CNN
+F 4 "RaspberryPi" H 3650 6100 50  0001 C CNN "Section"
 	1    3650 6100
 	1    0    0    -1  
 $EndComp
@@ -1211,6 +1234,7 @@ F 0 "R11" H 3220 6146 50  0000 L CNN
 F 1 "10k" H 3220 6055 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 3080 6100 50  0001 C CNN
 F 3 "~" H 3150 6100 50  0001 C CNN
+F 4 "RaspberryPi" H 3150 6100 50  0001 C CNN "Section"
 	1    3150 6100
 	1    0    0    -1  
 $EndComp
@@ -1226,6 +1250,7 @@ F 0 "Q2" V 3649 6250 50  0000 C CNN
 F 1 "Q_NMOS_GSD" V 3740 6250 50  0000 C CNN
 F 2 "Package_TO_SOT_SMD:SOT-23_Handsoldering" H 3600 6350 50  0001 C CNN
 F 3 "~" H 3400 6250 50  0001 C CNN
+F 4 "RaspberryPi" H 3400 6250 50  0001 C CNN "Section"
 	1    3400 6250
 	0    1    1    0   
 $EndComp
@@ -1273,6 +1298,7 @@ F 0 "R4" H 1870 6146 50  0000 L CNN
 F 1 "10k" H 1870 6055 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1730 6100 50  0001 C CNN
 F 3 "~" H 1800 6100 50  0001 C CNN
+F 4 "RaspberryPi" H 1800 6100 50  0001 C CNN "Section"
 	1    1800 6100
 	1    0    0    -1  
 $EndComp
@@ -1289,6 +1315,7 @@ F 0 "R1" H 1370 6146 50  0000 L CNN
 F 1 "10k" H 1370 6055 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1230 6100 50  0001 C CNN
 F 3 "~" H 1300 6100 50  0001 C CNN
+F 4 "RaspberryPi" H 1300 6100 50  0001 C CNN "Section"
 	1    1300 6100
 	1    0    0    -1  
 $EndComp
@@ -1310,6 +1337,7 @@ F 0 "Q1" V 1799 6250 50  0000 C CNN
 F 1 "Q_NMOS_GSD" V 1890 6250 50  0000 C CNN
 F 2 "Package_TO_SOT_SMD:SOT-23_Handsoldering" H 1750 6350 50  0001 C CNN
 F 3 "~" H 1550 6250 50  0001 C CNN
+F 4 "RaspberryPi" H 1550 6250 50  0001 C CNN "Section"
 	1    1550 6250
 	0    1    1    0   
 $EndComp
@@ -1351,6 +1379,7 @@ F 0 "R23" H 10870 9846 50  0000 L CNN
 F 1 "2k" H 10870 9755 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 10730 9800 50  0001 C CNN
 F 3 "~" H 10800 9800 50  0001 C CNN
+F 4 "PowerLed" H 10800 9800 50  0001 C CNN "Section"
 	1    10800 9800
 	1    0    0    -1  
 $EndComp
@@ -1362,6 +1391,7 @@ F 0 "D3" H 10793 10095 50  0000 C CNN
 F 1 "LED" H 10793 10186 50  0000 C CNN
 F 2 "LED_THT:LED_D3.0mm" H 10800 10350 50  0001 C CNN
 F 3 "~" H 10800 10350 50  0001 C CNN
+F 4 "PowerLed" H 10800 10350 50  0001 C CNN "Section"
 	1    10800 10350
 	0    -1   -1   0   
 $EndComp
@@ -1403,6 +1433,7 @@ F 0 "R20" H 10420 9846 50  0000 L CNN
 F 1 "560R" H 10420 9755 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 10280 9800 50  0001 C CNN
 F 3 "~" H 10350 9800 50  0001 C CNN
+F 4 "PowerLed" H 10350 9800 50  0001 C CNN "Section"
 	1    10350 9800
 	1    0    0    -1  
 $EndComp
@@ -1414,6 +1445,7 @@ F 0 "D2" H 10343 10095 50  0000 C CNN
 F 1 "LED" H 10343 10186 50  0000 C CNN
 F 2 "LED_THT:LED_D3.0mm" H 10350 10350 50  0001 C CNN
 F 3 "~" H 10350 10350 50  0001 C CNN
+F 4 "PowerLed" H 10350 10350 50  0001 C CNN "Section"
 	1    10350 10350
 	0    -1   -1   0   
 $EndComp
@@ -1489,6 +1521,7 @@ F 0 "J12" H 15050 9767 50  0000 C CNN
 F 1 "Conn_02x08_Odd_Even" H 15050 9676 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_2x08_P2.54mm_Vertical" H 15000 9250 50  0001 C CNN
 F 3 "~" H 15000 9250 50  0001 C CNN
+F 4 "IO" H 15000 9250 50  0001 C CNN "Section"
 	1    15000 9250
 	1    0    0    -1  
 $EndComp
@@ -1624,6 +1657,7 @@ F 0 "J9" H 13300 9767 50  0000 C CNN
 F 1 "Conn_02x08_Odd_Even" H 13300 9676 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_2x08_P2.54mm_Vertical" H 13250 9250 50  0001 C CNN
 F 3 "~" H 13250 9250 50  0001 C CNN
+F 4 "IO" H 13250 9250 50  0001 C CNN "Section"
 	1    13250 9250
 	1    0    0    -1  
 $EndComp
@@ -1802,6 +1836,7 @@ F 0 "C16" H 14665 1746 50  0000 L CNN
 F 1 "47u" H 14665 1655 50  0000 L CNN
 F 2 "Capacitor_THT:CP_Radial_D5.0mm_P2.00mm" H 14588 1550 50  0001 C CNN
 F 3 "~" H 14550 1700 50  0001 C CNN
+F 4 "AudioAmp" H 14550 1700 50  0001 C CNN "Section"
 	1    14550 1700
 	1    0    0    -1  
 $EndComp
@@ -1845,6 +1880,7 @@ F 0 "C13" H 14315 1746 50  0000 L CNN
 F 1 "1u" H 14315 1655 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 14238 1550 50  0001 C CNN
 F 3 "~" H 14200 1700 50  0001 C CNN
+F 4 "AudioAmp" H 14200 1700 50  0001 C CNN "Section"
 	1    14200 1700
 	1    0    0    -1  
 $EndComp
@@ -1856,6 +1892,7 @@ F 0 "C12" H 13765 1746 50  0000 L CNN
 F 1 "1u" H 13765 1655 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 13688 1550 50  0001 C CNN
 F 3 "~" H 13650 1700 50  0001 C CNN
+F 4 "AudioAmp" H 13650 1700 50  0001 C CNN "Section"
 	1    13650 1700
 	1    0    0    -1  
 $EndComp
@@ -1932,6 +1969,7 @@ F 0 "C10" H 13215 1746 50  0000 L CNN
 F 1 "1u" H 13215 1655 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 13138 1550 50  0001 C CNN
 F 3 "~" H 13100 1700 50  0001 C CNN
+F 4 "AudioAmp" H 13100 1700 50  0001 C CNN "Section"
 	1    13100 1700
 	1    0    0    -1  
 $EndComp
@@ -1947,6 +1985,7 @@ F 0 "C8" V 12098 2800 50  0000 C CNN
 F 1 "100n" V 12189 2800 50  0000 C CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 12388 2650 50  0001 C CNN
 F 3 "~" H 12350 2800 50  0001 C CNN
+F 4 "AudioAmp" H 12350 2800 50  0001 C CNN "Section"
 	1    12350 2800
 	0    1    1    0   
 $EndComp
@@ -1962,6 +2001,7 @@ F 0 "C9" V 12098 3200 50  0000 C CNN
 F 1 "470n" V 12189 3200 50  0000 C CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 12388 3050 50  0001 C CNN
 F 3 "~" H 12350 3200 50  0001 C CNN
+F 4 "AudioAmp" H 12350 3200 50  0001 C CNN "Section"
 	1    12350 3200
 	0    1    1    0   
 $EndComp
@@ -1973,6 +2013,7 @@ F 0 "C7" V 12098 2400 50  0000 C CNN
 F 1 "470n" V 12189 2400 50  0000 C CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 12388 2250 50  0001 C CNN
 F 3 "~" H 12350 2400 50  0001 C CNN
+F 4 "AudioAmp" H 12350 2400 50  0001 C CNN "Section"
 	1    12350 2400
 	0    1    1    0   
 $EndComp
@@ -1986,6 +2027,7 @@ F 0 "R24" V 12643 2400 50  0000 C CNN
 F 1 "10k" V 12734 2400 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 12780 2400 50  0001 C CNN
 F 3 "~" H 12850 2400 50  0001 C CNN
+F 4 "AudioAmp" H 12850 2400 50  0001 C CNN "Section"
 	1    12850 2400
 	0    1    1    0   
 $EndComp
@@ -1999,6 +2041,7 @@ F 0 "R25" V 12643 3200 50  0000 C CNN
 F 1 "10k" V 12734 3200 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 12780 3200 50  0001 C CNN
 F 3 "~" H 12850 3200 50  0001 C CNN
+F 4 "AudioAmp" H 12850 3200 50  0001 C CNN "Section"
 	1    12850 3200
 	0    1    1    0   
 $EndComp
@@ -2010,6 +2053,7 @@ F 0 "J11" H 15030 2892 50  0000 L CNN
 F 1 "Screw_Terminal_01x02" H 15030 2801 50  0000 L CNN
 F 2 "TerminalBlock_Phoenix:TerminalBlock_Phoenix_PT-1,5-2-5.0-H_1x02_P5.00mm_Horizontal" H 14950 2900 50  0001 C CNN
 F 3 "~" H 14950 2900 50  0001 C CNN
+F 4 "AudioAmp" H 14950 2900 50  0001 C CNN "Section"
 	1    14950 2900
 	1    0    0    -1  
 $EndComp
@@ -2021,6 +2065,7 @@ F 0 "J10" H 15030 2692 50  0000 L CNN
 F 1 "Screw_Terminal_01x02" H 15030 2601 50  0000 L CNN
 F 2 "TerminalBlock_Phoenix:TerminalBlock_Phoenix_PT-1,5-2-5.0-H_1x02_P5.00mm_Horizontal" H 14950 2700 50  0001 C CNN
 F 3 "~" H 14950 2700 50  0001 C CNN
+F 4 "AudioAmp" H 14950 2700 50  0001 C CNN "Section"
 	1    14950 2700
 	1    0    0    -1  
 $EndComp
@@ -2034,6 +2079,7 @@ F 0 "U4" H 13700 3650 50  0000 C CNN
 F 1 "PAM8403" H 13700 3550 50  0000 C CNN
 F 2 "Package_SO:SOIC-16_3.9x9.9mm_P1.27mm" H 13750 2950 50  0001 C CNN
 F 3 "" H 13750 3000 50  0001 C CNN
+F 4 "AudioAmp" H 13750 2950 50  0001 C CNN "Section"
 	1    13750 2950
 	1    0    0    -1  
 $EndComp
@@ -2057,6 +2103,7 @@ F 0 "R27" V 13650 7900 50  0000 C CNN
 F 1 "60R" V 13750 7900 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 13480 7900 50  0001 C CNN
 F 3 "~" H 13550 7900 50  0001 C CNN
+F 4 "CanTermination" H 13550 7900 50  0001 C CNN "Section"
 	1    13550 7900
 	0    1    1    0   
 $EndComp
@@ -2068,6 +2115,7 @@ F 0 "R26" V 13350 7700 50  0000 C CNN
 F 1 "60R" V 13450 7700 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 13480 7700 50  0001 C CNN
 F 3 "~" H 13550 7700 50  0001 C CNN
+F 4 "CanTermination" H 13550 7700 50  0001 C CNN "Section"
 	1    13550 7700
 	0    1    1    0   
 $EndComp
@@ -2079,6 +2127,7 @@ F 0 "C11" H 13265 7846 50  0000 L CNN
 F 1 "4n7" H 13265 7755 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 13188 7650 50  0001 C CNN
 F 3 "~" H 13150 7800 50  0001 C CNN
+F 4 "CanTermination" H 13150 7800 50  0001 C CNN "Section"
 	1    13150 7800
 	0    1    1    0   
 $EndComp
@@ -2112,6 +2161,7 @@ F 0 "R32" V 14950 7700 50  0000 C CNN
 F 1 "60R" V 15050 7700 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 14780 7700 50  0001 C CNN
 F 3 "~" H 14850 7700 50  0001 C CNN
+F 4 "CanTermination" H 14850 7700 50  0001 C CNN "Section"
 	1    14850 7700
 	0    -1   -1   0   
 $EndComp
@@ -2123,6 +2173,7 @@ F 0 "R33" V 14650 7900 50  0000 C CNN
 F 1 "60R" V 14750 7900 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 14780 7900 50  0001 C CNN
 F 3 "~" H 14850 7900 50  0001 C CNN
+F 4 "CanTermination" H 14850 7900 50  0001 C CNN "Section"
 	1    14850 7900
 	0    -1   -1   0   
 $EndComp
@@ -2134,6 +2185,7 @@ F 0 "C19" H 15365 7846 50  0000 L CNN
 F 1 "4n7" H 15365 7755 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 15288 7650 50  0001 C CNN
 F 3 "~" H 15250 7800 50  0001 C CNN
+F 4 "CanTermination" H 15250 7800 50  0001 C CNN "Section"
 	1    15250 7800
 	0    -1   -1   0   
 $EndComp
@@ -2193,6 +2245,7 @@ F 0 "C6" H 12165 6396 50  0000 L CNN
 F 1 "100u" H 12165 6305 50  0000 L CNN
 F 2 "Capacitor_THT:CP_Radial_D7.5mm_P2.50mm" H 12088 6200 50  0001 C CNN
 F 3 "~" H 12050 6350 50  0001 C CNN
+F 4 "PowerInput" H 12050 6350 50  0001 C CNN "Section"
 	1    12050 6350
 	1    0    0    -1  
 $EndComp
@@ -2234,6 +2287,7 @@ F 0 "R19" H 9970 9846 50  0000 L CNN
 F 1 "270R" H 9970 9755 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 9830 9800 50  0001 C CNN
 F 3 "~" H 9900 9800 50  0001 C CNN
+F 4 "RaspberryPi" H 9900 9800 50  0001 C CNN "Section"
 	1    9900 9800
 	1    0    0    -1  
 $EndComp
@@ -2245,6 +2299,7 @@ F 0 "D1" H 9893 10095 50  0000 C CNN
 F 1 "LED" H 9893 10186 50  0000 C CNN
 F 2 "LED_THT:LED_D3.0mm" H 9900 10350 50  0001 C CNN
 F 3 "~" H 9900 10350 50  0001 C CNN
+F 4 "RaspberryPi" H 9900 10350 50  0001 C CNN "Section"
 	1    9900 10350
 	0    -1   -1   0   
 $EndComp
@@ -2331,6 +2386,7 @@ F 0 "J2" H 4800 9217 50  0000 C CNN
 F 1 "Conn_02x08_Top_Bottom" H 4800 9126 50  0000 C CNN
 F 2 "Connector_PinSocket_2.54mm:PinSocket_2x08_P2.54mm_Vertical" H 4750 8700 50  0001 C CNN
 F 3 "~" H 4750 8700 50  0001 C CNN
+F 4 "IO" H 4750 8700 50  0001 C CNN "Section"
 	1    4750 8700
 	1    0    0    -1  
 $EndComp
@@ -2398,6 +2454,7 @@ F 0 "U3" H 10000 2650 50  0000 C CNN
 F 1 "TJA1051T/3" H 10000 2550 50  0000 C CNN
 F 2 "Package_SO:SOIC-8_3.9x4.9mm_P1.27mm" H 9750 1700 50  0001 C CIN
 F 3 "http://www.nxp.com/documents/data_sheet/TJA1051.pdf" H 9750 2200 50  0001 C CNN
+F 4 "CanModule" H 9750 2200 50  0001 C CNN "Section"
 	1    9750 2200
 	1    0    0    -1  
 $EndComp
@@ -2436,6 +2493,7 @@ F 0 "J8" H 11768 4117 50  0000 C CNN
 F 1 "Conn_01x03" H 11768 4026 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" H 11850 3800 50  0001 C CNN
 F 3 "~" H 11850 3800 50  0001 C CNN
+F 4 "AudioAmp" H 11850 3800 50  0001 C CNN "Section"
 	1    11850 3800
 	-1   0    0    -1  
 $EndComp
@@ -2464,6 +2522,7 @@ F 0 "R28" V 13693 4900 50  0000 C CNN
 F 1 "100R" V 13784 4900 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 13830 4900 50  0001 C CNN
 F 3 "~" H 13900 4900 50  0001 C CNN
+F 4 "AudioFilter" H 13900 4900 50  0001 C CNN "Section"
 	1    13900 4900
 	0    1    1    0   
 $EndComp
@@ -2475,6 +2534,7 @@ F 0 "C14" H 14000 5250 50  0000 L CNN
 F 1 "100n" H 13900 5150 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 14238 5050 50  0001 C CNN
 F 3 "~" H 14200 5200 50  0001 C CNN
+F 4 "AudioFilter" H 14200 5200 50  0001 C CNN "Section"
 	1    14200 5200
 	1    0    0    -1  
 $EndComp
@@ -2486,6 +2546,7 @@ F 0 "C17" V 14548 4900 50  0000 C CNN
 F 1 "47u" V 14639 4900 50  0000 C CNN
 F 2 "Capacitor_THT:CP_Radial_D5.0mm_P2.00mm" H 14838 4750 50  0001 C CNN
 F 3 "~" H 14800 4900 50  0001 C CNN
+F 4 "AudioFilter" H 14800 4900 50  0001 C CNN "Section"
 	1    14800 4900
 	0    1    1    0   
 $EndComp
@@ -2497,6 +2558,7 @@ F 0 "R30" H 14570 5246 50  0000 L CNN
 F 1 "100R" H 14570 5155 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 14430 5200 50  0001 C CNN
 F 3 "~" H 14500 5200 50  0001 C CNN
+F 4 "AudioFilter" H 14500 5200 50  0001 C CNN "Section"
 	1    14500 5200
 	1    0    0    -1  
 $EndComp
@@ -2550,6 +2612,7 @@ F 0 "R29" V 13693 6050 50  0000 C CNN
 F 1 "100R" V 13784 6050 50  0000 C CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 13830 6050 50  0001 C CNN
 F 3 "~" H 13900 6050 50  0001 C CNN
+F 4 "AudioFilter" H 13900 6050 50  0001 C CNN "Section"
 	1    13900 6050
 	0    1    1    0   
 $EndComp
@@ -2561,6 +2624,7 @@ F 0 "C15" H 14000 6400 50  0000 L CNN
 F 1 "100n" H 13900 6300 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 14238 6200 50  0001 C CNN
 F 3 "~" H 14200 6350 50  0001 C CNN
+F 4 "AudioFilter" H 14200 6350 50  0001 C CNN "Section"
 	1    14200 6350
 	1    0    0    -1  
 $EndComp
@@ -2572,6 +2636,7 @@ F 0 "C18" V 14548 6050 50  0000 C CNN
 F 1 "47u" V 14639 6050 50  0000 C CNN
 F 2 "Capacitor_THT:CP_Radial_D5.0mm_P2.00mm" H 14838 5900 50  0001 C CNN
 F 3 "~" H 14800 6050 50  0001 C CNN
+F 4 "AudioFilter" H 14800 6050 50  0001 C CNN "Section"
 	1    14800 6050
 	0    1    1    0   
 $EndComp
@@ -2583,6 +2648,7 @@ F 0 "R31" H 14570 6396 50  0000 L CNN
 F 1 "100R" H 14570 6305 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 14430 6350 50  0001 C CNN
 F 3 "~" H 14500 6350 50  0001 C CNN
+F 4 "AudioFilter" H 14500 6350 50  0001 C CNN "Section"
 	1    14500 6350
 	1    0    0    -1  
 $EndComp
@@ -2649,6 +2715,7 @@ F 0 "C20" H 8700 2600 50  0000 L CNN
 F 1 "100n" H 8650 2500 50  0000 L CNN
 F 2 "Capacitor_SMD:C_0805_2012Metric_Pad1.15x1.40mm_HandSolder" H 8988 2400 50  0001 C CNN
 F 3 "~" H 8950 2550 50  0001 C CNN
+F 4 "CanModule" H 8950 2550 50  0001 C CNN "Section"
 	1    8950 2550
 	1    0    0    -1  
 $EndComp
@@ -2701,6 +2768,7 @@ F 0 "Q5" V 11892 6150 50  0000 C CNN
 F 1 "ZXMP4A16G" V 11801 6150 50  0000 C CNN
 F 2 "Package_TO_SOT_SMD:SOT-223-3_TabPin2" H 11750 6075 50  0001 L CIN
 F 3 "https://www.diodes.com/assets/Datasheets/ZXMP4A16G.pdf" H 11550 6150 50  0001 L CNN
+F 4 "PowerInput" H 11550 6150 50  0001 C CNN "Section"
 	1    11550 6150
 	0    1    -1   0   
 $EndComp
@@ -2712,6 +2780,7 @@ F 0 "Q3" V 10442 6150 50  0000 C CNN
 F 1 "ZXMP4A16G" V 10351 6150 50  0000 C CNN
 F 2 "Package_TO_SOT_SMD:SOT-223-3_TabPin2" H 10300 6075 50  0001 L CIN
 F 3 "https://www.diodes.com/assets/Datasheets/ZXMP4A16G.pdf" H 10100 6150 50  0001 L CNN
+F 4 "PowerInput" H 10100 6150 50  0001 C CNN "Section"
 	1    10100 6150
 	0    -1   -1   0   
 $EndComp
@@ -2747,6 +2816,7 @@ F 0 "R6" H 10570 6346 50  0000 L CNN
 F 1 "10k" H 10570 6255 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 10430 6300 50  0001 C CNN
 F 3 "~" H 10500 6300 50  0001 C CNN
+F 4 "PowerInput" H 10500 6300 50  0001 C CNN "Section"
 	1    10500 6300
 	1    0    0    -1  
 $EndComp
@@ -2758,6 +2828,7 @@ F 0 "D4" V 10454 6880 50  0000 L CNN
 F 1 "BZX384-4V3" V 10545 6880 50  0000 L CNN
 F 2 "Diode_SMD:D_SOD-323_HandSoldering" H 10500 6800 50  0001 C CNN
 F 3 "~" H 10500 6800 50  0001 C CNN
+F 4 "PowerInput" H 10500 6800 50  0001 C CNN "Section"
 	1    10500 6800
 	0    1    1    0   
 $EndComp
@@ -2791,6 +2862,7 @@ F 0 "Q4" H 11004 6504 50  0000 L CNN
 F 1 "ZXMP4A16G" H 11004 6595 50  0000 L CNN
 F 2 "Package_TO_SOT_SMD:SOT-223-3_TabPin2" H 11000 6475 50  0001 L CIN
 F 3 "https://www.diodes.com/assets/Datasheets/ZXMP4A16G.pdf" H 10800 6550 50  0001 L CNN
+F 4 "PowerInput" H 10800 6550 50  0001 C CNN "Section"
 	1    10800 6550
 	1    0    0    1   
 $EndComp
@@ -2821,6 +2893,7 @@ F 0 "R13" H 11620 6996 50  0000 L CNN
 F 1 "10k" H 11620 6905 50  0000 L CNN
 F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 11480 6950 50  0001 C CNN
 F 3 "~" H 11550 6950 50  0001 C CNN
+F 4 "PowerInput" H 11550 6950 50  0001 C CNN "Section"
 	1    11550 6950
 	1    0    0    -1  
 $EndComp

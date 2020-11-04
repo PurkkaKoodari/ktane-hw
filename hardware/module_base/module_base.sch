@@ -1012,17 +1012,6 @@ Wire Wire Line
 	12650 1900 12650 1700
 Wire Wire Line
 	12650 1700 12800 1700
-$Comp
-L Connector:Conn_01x30_Female J3
-U 1 1 5ED95C02
-P 8200 6200
-F 0 "J3" H 8228 6176 50  0000 L CNN
-F 1 "Conn_01x30_Female" H 8228 6085 50  0000 L CNN
-F 2 "Connector_PinSocket_2.54mm:PinSocket_1x30_P2.54mm_Vertical" H 8200 6200 50  0001 C CNN
-F 3 "~" H 8200 6200 50  0001 C CNN
-	1    8200 6200
-	1    0    0    -1  
-$EndComp
 Wire Wire Line
 	6550 9450 6550 7200
 Wire Wire Line
@@ -1057,4 +1046,35 @@ Wire Wire Line
 	7050 7700 7050 9950
 Wire Wire Line
 	6100 9950 7050 9950
+$Comp
+L Connector:Conn_01x32_Female J3
+U 1 1 6097D987
+P 8200 6300
+F 0 "J3" H 8228 6276 50  0000 L CNN
+F 1 "Conn_01x32_Female" H 8228 6185 50  0000 L CNN
+F 2 "Connector_PinSocket_2.54mm:PinSocket_1x32_P2.54mm_Vertical" H 8200 6300 50  0001 C CNN
+F 3 "~" H 8200 6300 50  0001 C CNN
+	1    8200 6300
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 6098995E
+P 7850 8000
+F 0 "#PWR?" H 7850 7750 50  0001 C CNN
+F 1 "GND" H 7855 7827 50  0000 C CNN
+F 2 "" H 7850 8000 50  0001 C CNN
+F 3 "" H 7850 8000 50  0001 C CNN
+	1    7850 8000
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7850 8000 7850 7900
+Wire Wire Line
+	7850 7800 8000 7800
+Wire Wire Line
+	8000 7900 7850 7900
+Connection ~ 7850 7900
+Wire Wire Line
+	7850 7900 7850 7800
 $EndSCHEMATC

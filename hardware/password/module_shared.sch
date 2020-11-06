@@ -169,7 +169,7 @@ AR Path="/5EAC2475/5F2CBE03" Ref="R?"  Part="1"
 AR Path="/5F72C2C1/5F2CBE03" Ref="R2"  Part="1" 
 F 0 "R2" H 1770 3746 50  0000 L CNN
 F 1 "560R" H 1770 3655 50  0000 L CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1630 3700 50  0001 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder" V 1630 3700 50  0001 C CNN
 F 3 "~" H 1700 3700 50  0001 C CNN
 	1    1700 3700
 	-1   0    0    -1  
@@ -277,7 +277,7 @@ AR Path="/5EAC2475/5F2CBE32" Ref="R?"  Part="1"
 AR Path="/5F72C2C1/5F2CBE32" Ref="R1"  Part="1" 
 F 0 "R1" H 1770 2546 50  0000 L CNN
 F 1 "560R" H 1770 2455 50  0000 L CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1630 2500 50  0001 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder" V 1630 2500 50  0001 C CNN
 F 3 "~" H 1700 2500 50  0001 C CNN
 	1    1700 2500
 	-1   0    0    -1  

@@ -19,7 +19,7 @@ U 1 1 5EC15B8A
 P 1850 3950
 F 0 "SW1" H 1850 4235 50  0000 C CNN
 F 1 "SW_Push" H 1850 4144 50  0000 C CNN
-F 2 "Button_Switch_Keyboard:SW_Cherry_MX_1.00u_Plate" H 1850 4150 50  0001 C CNN
+F 2 "Button_Switch_Keyboard:SW_Cherry_MX_1.00u_PCB" H 1850 4150 50  0001 C CNN
 F 3 "~" H 1850 4150 50  0001 C CNN
 	1    1850 3950
 	1    0    0    -1  
@@ -30,7 +30,7 @@ U 1 1 5EC174C5
 P 1850 5450
 F 0 "SW3" H 1850 5735 50  0000 C CNN
 F 1 "SW_Push" H 1850 5644 50  0000 C CNN
-F 2 "Button_Switch_Keyboard:SW_Cherry_MX_1.00u_Plate" H 1850 5650 50  0001 C CNN
+F 2 "Button_Switch_Keyboard:SW_Cherry_MX_1.00u_PCB" H 1850 5650 50  0001 C CNN
 F 3 "~" H 1850 5650 50  0001 C CNN
 	1    1850 5450
 	1    0    0    -1  
@@ -41,7 +41,7 @@ U 1 1 5EC189D9
 P 3850 3950
 F 0 "SW2" H 3850 4235 50  0000 C CNN
 F 1 "SW_Push" H 3850 4144 50  0000 C CNN
-F 2 "Button_Switch_Keyboard:SW_Cherry_MX_1.00u_Plate" H 3850 4150 50  0001 C CNN
+F 2 "Button_Switch_Keyboard:SW_Cherry_MX_1.00u_PCB" H 3850 4150 50  0001 C CNN
 F 3 "~" H 3850 4150 50  0001 C CNN
 	1    3850 3950
 	1    0    0    -1  
@@ -52,7 +52,7 @@ U 1 1 5EC19475
 P 3850 5450
 F 0 "SW4" H 3850 5735 50  0000 C CNN
 F 1 "SW_Push" H 3850 5644 50  0000 C CNN
-F 2 "Button_Switch_Keyboard:SW_Cherry_MX_1.00u_Plate" H 3850 5650 50  0001 C CNN
+F 2 "Button_Switch_Keyboard:SW_Cherry_MX_1.00u_PCB" H 3850 5650 50  0001 C CNN
 F 3 "~" H 3850 5650 50  0001 C CNN
 	1    3850 5450
 	1    0    0    -1  

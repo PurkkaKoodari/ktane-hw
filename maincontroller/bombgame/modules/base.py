@@ -65,6 +65,7 @@ class Module(ABC):
         self._bomb.trigger(error)
 
     def _describe_error(self, error: ErrorMessage) -> str:
+        """Generates a textual description of the given error."""
         try:
             return DEFAULT_ERROR_DESCRIPTIONS[error.code]
         except KeyError:
@@ -121,23 +122,22 @@ class Module(ABC):
     @abstractmethod
     def ui_state(self):
         """Returns a JSON-encodable object that represents the module's state to be passed to the UI."""
-        pass
 
     @property
     def error_level(self) -> BombErrorLevel:
+        """Returns the module's error level shown in the UI."""
         return max((error.level for _, error in self.errors), default=BombErrorLevel.NONE)
 
     @abstractmethod
     def generate(self):
+        """Generates a state for the module."""
         # TODO: Figure out how this method is going to be used with different kinds of modules.
         #  For example, we might want to have a generic UI toolkit for modules to define a 'randomize'
         #  button on the web UI, but also allow manual input of e.g. wire colors
-        pass
 
     @abstractmethod
     async def send_state(self):
         """Called by the bomb to send the state to a module that has been reset (including at game start)."""
-        pass
 
     async def defuse(self):
         """Called by module code to mark the module as defused."""

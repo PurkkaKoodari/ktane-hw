@@ -69,6 +69,7 @@ __attribute__((weak)) void moduleStrike() {}
 //////////////////////////// MAIN FUNCTIONS ////////////////////////////
 
 void initHardware() {
+  pinMode(MODULE_READY_PIN, OUTPUT);
   pinMode(MODULE_ENABLE_PIN, INPUT);
 #ifndef NO_STATUS_LED
   pinMode(STRIKE_LED_PIN, OUTPUT);
@@ -80,7 +81,9 @@ void initHardware() {
 }
 
 void resetModule() {
+  DEBUG_PRINTLN("resetting module");
   mode = RESET;
+  digitalWrite(MODULE_READY_PIN, LOW);
   timer_started = false;
   game_ended = false;
   exploded = false;
@@ -104,7 +107,6 @@ void handleMessage() {
   uint16_t messageId = (uint16_t) ((canFrame.can_id & MESSAGE_ID_MASK) >> MESSAGE_ID_OFFSET);
 
   if (messageId == MESSAGE_RESET) {
-    DEBUG_PRINTLN("resetting module");
     resetModule();
     return;
   }
@@ -195,13 +197,15 @@ void setup() {
     delay(100);
   }
   DEBUG_PRINTLN("can init success");
-  moduleInitHardware();
+  initHardware();
   resetModule();
   attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT_PIN), messageReceived, FALLING);
+  DEBUG_PRINTLN("module init success");
 }
 
 void loop() {
   if (mode == RESET && !digitalRead(MODULE_ENABLE_PIN)) {
+    digitalWrite(MODULE_READY_PIN, HIGH);
     DEBUG_PRINTLN("announcing module");
     *(struct announce_data *) &canFrame.data = {
       VERSION_HW_MAJOR, VERSION_HW_MINOR,

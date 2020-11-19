@@ -16,9 +16,10 @@
 
 //////////////////////////// GLOBAL PIN DEFINITIONS ////////////////////////////
 
-#define MCP_CS_PIN 10
+#define MCP_CS_PIN 8
 #define MCP_INTERRUPT_PIN 2
 
+#define MODULE_READY_PIN A2
 #define MODULE_ENABLE_PIN A3
 
 //////////////////////////// MESSAGE FORMAT CONSTANTS ////////////////////////////

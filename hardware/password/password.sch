@@ -414,7 +414,7 @@ Wire Wire Line
 Wire Wire Line
 	3250 7800 3250 8500
 Text GLabel 4150 10500 0    50   Input ~ 0
-A6
+A5_SCL
 Wire Wire Line
 	2450 8150 2950 8150
 Connection ~ 2950 8150

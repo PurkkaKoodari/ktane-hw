@@ -28,7 +28,7 @@ Wire Wire Line
 Wire Wire Line
 	8750 3300 8600 3300
 Text GLabel 8750 3600 2    50   Input ~ 0
-MODULE_ENABLE
+A3_MODULE_ENABLE
 Text GLabel 8750 3400 2    50   Input ~ 0
 A1
 Text GLabel 8750 3300 2    50   Input ~ 0
@@ -82,23 +82,13 @@ D6
 Text GLabel 7100 3200 0    50   Input ~ 0
 D5
 Wire Wire Line
-	6800 3800 6400 3800
-Wire Wire Line
-	6800 4150 6800 3800
-Wire Wire Line
-	6900 3900 7600 3900
-Wire Wire Line
-	6900 4150 6900 3900
-Wire Wire Line
-	7000 4000 6300 4000
-Wire Wire Line
-	7000 4150 7000 4000
+	7100 4150 7100 4000
+Text GLabel 7100 4150 3    50   Input ~ 0
+D13_SCK
 Text GLabel 7000 4150 3    50   Input ~ 0
-SCK
+D12_MISO
 Text GLabel 6900 4150 3    50   Input ~ 0
-MISO
-Text GLabel 6800 4150 3    50   Input ~ 0
-MOSI
+D11_MOSI
 Text GLabel 8750 3800 2    50   Input ~ 0
 A5_SCL
 Text GLabel 8750 3700 2    50   Input ~ 0
@@ -134,31 +124,28 @@ $EndComp
 Wire Wire Line
 	3500 3100 3050 3100
 Text GLabel 3500 3100 2    50   Input ~ 0
-MODULE_ENABLE
+A3_MODULE_ENABLE
 Wire Wire Line
 	8200 4350 8100 4350
 Wire Wire Line
 	8200 4300 8200 4350
 Wire Wire Line
 	8100 4350 8100 4300
-Connection ~ 8200 4350
-Wire Wire Line
-	8500 4350 8200 4350
 $Comp
 L power:GND #PWR?
 U 1 1 5F2CBDF9
-P 8500 4350
+P 8200 4600
 AR Path="/5F2CBDF9" Ref="#PWR?"  Part="1" 
 AR Path="/5EF969E2/5F2CBDF9" Ref="#PWR011"  Part="1" 
 AR Path="/5EAC2475/5F2CBDF9" Ref="#PWR?"  Part="1" 
 AR Path="/5F72C2C1/5F2CBDF9" Ref="#PWR?"  Part="1" 
 AR Path="/5F6EA359/5F2CBDF9" Ref="#PWR011"  Part="1" 
-F 0 "#PWR011" H 8500 4100 50  0001 C CNN
-F 1 "GND" V 8505 4222 50  0000 R CNN
-F 2 "" H 8500 4350 50  0001 C CNN
-F 3 "" H 8500 4350 50  0001 C CNN
-	1    8500 4350
-	0    -1   -1   0   
+F 0 "#PWR011" H 8200 4350 50  0001 C CNN
+F 1 "GND" V 8205 4472 50  0000 R CNN
+F 2 "" H 8200 4600 50  0001 C CNN
+F 3 "" H 8200 4600 50  0001 C CNN
+	1    8200 4600
+	1    0    0    -1  
 $EndComp
 Wire Wire Line
 	8750 4000 8600 4000
@@ -173,7 +160,7 @@ AR Path="/5F72C2C1/5F2CBE03" Ref="R?"  Part="1"
 AR Path="/5F6EA359/5F2CBE03" Ref="R2"  Part="1" 
 F 0 "R2" H 1770 3746 50  0000 L CNN
 F 1 "560R" H 1770 3655 50  0000 L CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1630 3700 50  0001 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder" V 1630 3700 50  0001 C CNN
 F 3 "~" H 1700 3700 50  0001 C CNN
 	1    1700 3700
 	-1   0    0    -1  
@@ -287,7 +274,7 @@ AR Path="/5F72C2C1/5F2CBE32" Ref="R?"  Part="1"
 AR Path="/5F6EA359/5F2CBE32" Ref="R1"  Part="1" 
 F 0 "R1" H 1770 2546 50  0000 L CNN
 F 1 "560R" H 1770 2455 50  0000 L CNN
-F 2 "Resistor_SMD:R_0603_1608Metric_Pad1.05x0.95mm_HandSolder" V 1630 2500 50  0001 C CNN
+F 2 "Resistor_SMD:R_0603_1608Metric_Pad0.98x0.95mm_HandSolder" V 1630 2500 50  0001 C CNN
 F 3 "~" H 1700 2500 50  0001 C CNN
 	1    1700 2500
 	-1   0    0    -1  
@@ -312,25 +299,20 @@ Wire Wire Line
 	5600 3300 6600 3300
 Wire Wire Line
 	6500 3200 6500 3900
-Connection ~ 6900 3900
-Wire Wire Line
-	6500 3900 6900 3900
 Wire Wire Line
 	5600 3200 6500 3200
 Wire Wire Line
 	6400 3100 5600 3100
 Wire Wire Line
 	6400 3800 6400 3100
-Connection ~ 6800 3800
 Wire Wire Line
-	7600 3800 6800 3800
+	7600 3800 6900 3800
 Wire Wire Line
 	6300 3000 5600 3000
 Wire Wire Line
 	6300 4000 6300 3000
-Connection ~ 7000 4000
 Wire Wire Line
-	7600 4000 7000 4000
+	7600 4000 7100 4000
 $Comp
 L power:GND #PWR?
 U 1 1 5F2CBE57
@@ -364,26 +346,17 @@ F 3 "" H 5700 3800 50  0001 C CNN
 	-1   0    0    1   
 $EndComp
 Wire Wire Line
-	5600 2900 7600 2900
+	5600 2900 6700 2900
 Text GLabel 8750 3500 2    50   Input ~ 0
-MODULE_READY
+A2_MODULE_READY
 NoConn ~ 4600 3600
 NoConn ~ 4600 3700
-NoConn ~ 7600 2800
-NoConn ~ 7600 2700
-NoConn ~ 8000 2300
-NoConn ~ 8200 2300
-NoConn ~ 8600 3100
-NoConn ~ 8600 2800
-NoConn ~ 8600 2700
 Wire Wire Line
 	7100 3700 7600 3700
 Wire Wire Line
 	6600 3300 6600 3500
-Wire Wire Line
-	6600 3500 7600 3500
 Text GLabel 3500 3000 2    50   Input ~ 0
-MODULE_READY
+A2_MODULE_READY
 Text GLabel 7100 3100 0    50   Input ~ 0
 D4
 Text GLabel 7100 3000 0    50   Input ~ 0
@@ -409,7 +382,7 @@ $EndComp
 Wire Wire Line
 	2650 2350 2650 2500
 Text GLabel 1700 4050 2    50   Input ~ 0
-MODULE_ENABLE
+A3_MODULE_ENABLE
 Wire Wire Line
 	1700 2050 1700 2350
 Wire Wire Line
@@ -474,4 +447,78 @@ F 3 "~" V 1700 3350 50  0001 C CNN
 	1    1700 3350
 	0    1    1    0   
 $EndComp
+Text GLabel 8750 2800 2    50   Input ~ 0
+RST
+Wire Wire Line
+	8750 2800 8650 2800
+Wire Wire Line
+	8650 2800 8650 2700
+Wire Wire Line
+	8650 2700 8600 2700
+Connection ~ 8650 2800
+Wire Wire Line
+	8650 2800 8600 2800
+Text GLabel 8750 3100 2    50   Input ~ 0
+AREF
+Wire Wire Line
+	8750 3100 8600 3100
+Text GLabel 7450 2700 0    50   Input ~ 0
+D0_RX
+Text GLabel 7450 2800 0    50   Input ~ 0
+D1_TX
+Wire Wire Line
+	7450 2800 7600 2800
+Wire Wire Line
+	7600 2700 7450 2700
+$Comp
+L power:+3V3 #PWR0108
+U 1 1 5FF81BB7
+P 8200 2000
+F 0 "#PWR0108" H 8200 1850 50  0001 C CNN
+F 1 "+3V3" H 8215 2173 50  0000 C CNN
+F 2 "" H 8200 2000 50  0001 C CNN
+F 3 "" H 8200 2000 50  0001 C CNN
+	1    8200 2000
+	1    0    0    -1  
+$EndComp
+Text GLabel 8000 2150 1    50   Input ~ 0
+VIN
+Wire Wire Line
+	8000 2150 8000 2300
+Wire Wire Line
+	8200 2300 8200 2000
+Wire Wire Line
+	8200 4600 8200 4350
+Connection ~ 8200 4350
+Text GLabel 6800 4150 3    50   Input ~ 0
+D8_CAN_CS
+Connection ~ 6800 3500
+Wire Wire Line
+	6800 3500 7600 3500
+Connection ~ 6900 3800
+Connection ~ 7000 3900
+Wire Wire Line
+	7000 3900 7600 3900
+Connection ~ 7100 4000
+Wire Wire Line
+	6600 3500 6800 3500
+Wire Wire Line
+	6400 3800 6900 3800
+Wire Wire Line
+	6800 3500 6800 4150
+Wire Wire Line
+	6900 3800 6900 4150
+Wire Wire Line
+	6500 3900 7000 3900
+Wire Wire Line
+	7000 3900 7000 4150
+Wire Wire Line
+	6300 4000 7100 4000
+Text GLabel 6700 4150 3    50   Input ~ 0
+D2_CAN_INT
+Wire Wire Line
+	6700 4150 6700 2900
+Connection ~ 6700 2900
+Wire Wire Line
+	6700 2900 7600 2900
 $EndSCHEMATC

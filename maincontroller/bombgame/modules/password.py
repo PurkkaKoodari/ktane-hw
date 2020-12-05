@@ -25,7 +25,7 @@ COLUMN_CHARS = 6
 
 @MODULE_ID_REGISTRY.register
 class PasswordModule(Module):
-    module_id = 4
+    module_id = 12
 
     __slots__ = ("_characters", "_solution")
 
@@ -50,12 +50,10 @@ class PasswordModule(Module):
         for pos, column in enumerate(self._characters):
             encoded = "".join(column).encode("ascii")
             await self._bomb.send(PasswordSetCharactersMessage(self.bus_id, position=pos, characters=encoded))
-        encoded = self._solution.encode("ascii")
-        await self._bomb.send(PasswordSetCharactersMessage(self.bus_id, position=WORD_LENGTH, characters=encoded))
 
     async def handle_message(self, message: BusMessage):
-        if isinstance(message, PasswordEventMessage) and self.state in (ModuleState.GAME, ModuleState.DEFUSED):
-            if message.correct:
+        if isinstance(message, PasswordSubmitMessage) and self.state in (ModuleState.GAME, ModuleState.DEFUSED):
+            if message.word == self._solution.encode("ascii"):
                 await self.defuse()
             else:
                 await self.strike()
@@ -89,40 +87,39 @@ class PasswordSetCharactersMessage(BusMessage):
 
     @classmethod
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
-        if len(data) not in (WORD_LENGTH + 1, COLUMN_CHARS + 1):
-            raise ValueError(f"{cls.__name__} must have {WORD_LENGTH + 1} or {COLUMN_CHARS + 1} bytes of data")
+        if len(data) != COLUMN_CHARS + 1:
+            raise ValueError(f"{cls.__name__} must have {COLUMN_CHARS + 1} bytes of data")
         position, = struct.unpack_from("<B", data, 0)
-        characters = data[1:]
+        characters = bytes(data[1:])
         return cls(module, direction, position=position, characters=characters)
 
     def _serialize_data(self) -> bytes:
         return struct.pack("<B", self.position) + self.characters
 
     def _data_repr(self) -> str:
-        kind = f"column {self.position + 1}" if self.position < WORD_LENGTH else "solution"
-        return f"{kind}: {self.characters}"
+        return f"column {self.position + 1}: {self.characters}"
 
 
-# TODO: duplicated from Keypad (and in future probably others) - maybe move generic messages elsewhere
 @MODULE_MESSAGE_ID_REGISTRY.register
-class PasswordEventMessage(BusMessage):
+class PasswordSubmitMessage(BusMessage):
     message_id = (PasswordModule, BusMessageId.MODULE_SPECIFIC_1)
 
-    __slots__ = ("correct",)
+    __slots__ = ("word",)
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 correct: bool):
+                 word: bytes):
         super().__init__(self.__class__.message_id[1], module, direction)
-        self.correct = correct
+        self.word = word
 
     @classmethod
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
-        if len(data) != 1:
-            raise ValueError(f"{cls.__name__} must have 1 byte of data")
-        return cls(module, direction, correct=bool(data[0]))
+        if len(data) != WORD_LENGTH:
+            raise ValueError(f"{cls.__name__} must have {WORD_LENGTH} bytes of data")
+        word = bytes(data)
+        return cls(module, direction, word=word)
 
     def _serialize_data(self):
-        return struct.pack("<B", self.correct)
+        return self.word
 
     def _data_repr(self):
-        return "correct" if self.correct else "incorrect"
+        return f"{self.word}"

@@ -2,7 +2,8 @@ MODULE_NAMES = [
     "Timer",
     "SimonSays",
     "Keypad",
-    "Wires"
+    "Wires",
+    "Password",
 ]
 
 

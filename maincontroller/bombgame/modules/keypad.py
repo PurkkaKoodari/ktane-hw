@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 from enum import IntEnum, Enum
 from random import sample
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Iterable, List
 
 from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
 from bombgame.modules.base import Module, ModuleState
@@ -65,11 +65,13 @@ class KeypadModule(Module):
 
     _buttons: Optional[Sequence[KeypadSymbol]]
     _solution: Optional[Sequence[KeypadPosition]]
+    _pressed: List[KeypadPosition]
 
     def __init__(self, bomb, bus_id, location, hw_version, sw_version):
         super().__init__(bomb, bus_id, location, hw_version, sw_version)
         self._buttons = None
         self._solution = None
+        self._pressed = []
 
     def generate(self):
         while True:
@@ -81,70 +83,76 @@ class KeypadModule(Module):
                 break
 
     async def send_state(self):
-        await self._bomb.send(KeypadSetSolutionMessage(self.bus_id, sequence=self._solution))
+        pass
 
     async def handle_message(self, message: BusMessage):
-        if isinstance(message, KeypadEventMessage) and self.state in (ModuleState.GAME, ModuleState.DEFUSED):
-            if message.correct:
-                await self.defuse()
+        if isinstance(message, KeypadPressMessage) and self.state in (ModuleState.GAME, ModuleState.DEFUSED):
+            if len(self._pressed) < len(self._solution) and message.position == self._solution[len(self._pressed)]:
+                self._pressed.append(message.position)
+                await self._bomb.send(KeypadSetLedsMessage(self.bus_id, positions=self._pressed))
+                if len(self._pressed) == len(self._solution):
+                    await self.defuse()
             else:
                 await self.strike()
             return True
         return await super().handle_message(message)
 
     def ui_state(self):
+        if self._buttons is None:
+            return {}
         return {
             "buttons": [symbol.value for symbol in self._buttons],
-            "solution": [position.name for position in self._solution]
+            "solution": [position.name for position in self._solution],
+            "pressed": [position.name for position in self._pressed],
         }
 
 
 @MODULE_MESSAGE_ID_REGISTRY.register
-class KeypadSetSolutionMessage(BusMessage):
+class KeypadPressMessage(BusMessage):
     message_id = (KeypadModule, BusMessageId.MODULE_SPECIFIC_0)
 
-    __slots__ = ("sequence",)
+    __slots__ = ("position",)
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 sequence: Sequence[KeypadPosition]):
+                 position: KeypadPosition):
         super().__init__(self.__class__.message_id[1], module, direction)
-        if set(sequence) != set(KeypadPosition.__members__.values()):
-            raise ValueError("sequence must contain all 4 buttons")
-        self.sequence = sequence
-
-    @classmethod
-    def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
-        if len(data) != 4:
-            raise ValueError(f"{cls.__name__} must have 4 bytes of data")
-        sequence = tuple(KeypadPosition(byte) for byte in data)
-        return cls(module, direction, sequence=sequence)
-
-    def _serialize_data(self):
-        return b"".join(struct.pack("<B", button) for button in self.sequence)
-
-    def _data_repr(self):
-        return " ".join(position.name for position in self.sequence)
-
-
-@MODULE_MESSAGE_ID_REGISTRY.register
-class KeypadEventMessage(BusMessage):
-    message_id = (KeypadModule, BusMessageId.MODULE_SPECIFIC_1)
-
-    __slots__ = ("correct",)
-
-    def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 correct: bool):
-        super().__init__(self.__class__.message_id[1], module, direction)
-        self.correct = correct
+        self.position = position
 
     @classmethod
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
         if len(data) != 1:
             raise ValueError(f"{cls.__name__} must have 1 byte of data")
-        return cls(module, direction, correct=bool(data[0]))
+        position, = struct.unpack("<B", data)
+        return cls(module, direction, position=KeypadPosition(position))
 
     def _serialize_data(self):
-        return struct.pack("<B", self.correct)
+        return struct.pack("<B", self.position.value)
 
     def _data_repr(self):
-        return "correct" if self.correct else "incorrect"
+        return self.position.name
+
+
+@MODULE_MESSAGE_ID_REGISTRY.register
+class KeypadSetLedsMessage(BusMessage):
+    message_id = (KeypadModule, BusMessageId.MODULE_SPECIFIC_1)
+
+    __slots__ = ("positions",)
+
+    def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
+                 positions: Iterable[KeypadPosition]):
+        super().__init__(self.__class__.message_id[1], module, direction)
+        self.positions = set(positions)
+
+    @classmethod
+    def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
+        if len(data) != 1:
+            raise ValueError(f"{cls.__name__} must have 1 byte of data")
+        bitfield, = struct.unpack("<B", data)
+        positions = (pos for pos in KeypadPosition.__members__.values() if bitfield & (1 << pos.value))
+        return cls(module, direction, positions=positions)
+
+    def _serialize_data(self):
+        return struct.pack("<B", sum(1 << pos.value for pos in self.positions))
+
+    def _data_repr(self):
+        return ", ".join(pos.name for pos in self.positions) or "none"

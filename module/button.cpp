@@ -10,34 +10,46 @@ unsigned long hold_trigger = 0;
 unsigned long debounce = 0;
 
 enum button_action {
-    PRESS, HOLD, RELEASE_PRESS, RELEASE_HOLD;
+    PRESS = 0, HOLD = 1, RELEASE_PRESS = 2, RELEASE_HOLD = 3
 };
 
-struct button_press_data {
+struct button_action_data {
     enum button_action action;
 };
 struct button_light_data {
-  uint8_t color;
+  uint8_t red;
+  uint8_t green;
+  uint8_t blue;
 };
 
+CRGB leds[NUM_LEDS];
+
 void moduleInitHardware() {
-  pinMode(LED_RED_PIN, OUTPUT);
-  digitalWrite(LED_RED_PIN, LOW);
-  pinMode(LED_GREEN_PIN, OUTPUT);
-  digitalWrite(LED_GREEN_PIN, LOW);
-  pinMode(LED_BLUE_PIN, OUTPUT);
-  digitalWrite(LED_BLUE_PIN, LOW);
+  pinMode(LED_DATA_PIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT_PULLUP);
+  FastLED.addLeds<WS2812B, LED_DATA_PIN, GRB>(leds, NUM_LEDS);
+}
+
+void setLightStripColor(uint8_t red, uint8_t green, uint8_t blue) {
+  for (uint8_t i = 0; i < NUM_LEDS; i++) {
+      leds[i].r = red;
+      leds[i].r = green;
+      leds[i].r = blue;
+    }
+    FastLED.show();
+}
+
+void moduleReset() {
+  setLightStripColor(0, 0, 0);
 }
 
 bool moduleHandleMessage(uint16_t messageId) {
   switch (messageId) {
   case MESSAGE_MODULE_SPECIFIC_1:
-    uint8_t color = (uint8_t) ((struct button_light_data *) &canFrame.data)->color;
-    // TODO: neopixel control
-    digitalWrite(LED_RED_PIN, (color >> 2) & 1);
-    digitalWrite(LED_GREEN_PIN, (color >> 1) & 1);
-    digitalWrite(LED_BLUE_PIN, color & 1);
+    uint8_t red = (uint8_t) ((struct button_light_data *) &canFrame.data)->red;
+    uint8_t green = (uint8_t) ((struct button_light_data *) &canFrame.data)->green;
+    uint8_t blue = (uint8_t) ((struct button_light_data *) &canFrame.data)->blue;
+    setLightStripColor(red, green, blue);
     return true;
   default:
     return false;
@@ -55,7 +67,7 @@ void moduleLoop() {
           hold_trigger = millis() + BUTTON_HOLD_LENGTH;
           DEBUG_PRINT("press at ");
           DEBUG_PRINTLN(millis());
-          ((struct button_press_data *) &canFrame.data)->action = PRESS;
+          ((struct button_action_data *) &canFrame.data)->action = PRESS;
           sendMessage(MESSAGE_MODULE_SPECIFIC_0, 1);
         } else {
           pressed = 0;
@@ -63,11 +75,11 @@ void moduleLoop() {
           DEBUG_PRINTLN(millis());
           if (hold_trigger == 0) {
           // hold already triggered, send RELEASE_HOLD
-            ((struct button_press_data *) &canFrame.data)->action = RELEASE_HOLD;
+            ((struct button_action_data *) &canFrame.data)->action = RELEASE_HOLD;
             sendMessage(MESSAGE_MODULE_SPECIFIC_0, 1);
           } else {
             // hold not triggered yet, send RELEASE_PRESS
-            ((struct button_press_data *) &canFrame.data)->action = RELEASE_PRESS;
+            ((struct button_action_data *) &canFrame.data)->action = RELEASE_PRESS;
             sendMessage(MESSAGE_MODULE_SPECIFIC_0, 1);
           }
         }
@@ -77,7 +89,7 @@ void moduleLoop() {
         DEBUG_PRINT("hold detected at ");
         DEBUG_PRINTLN(millis());
         hold_trigger = 0;
-        ((struct button_press_data *) &canFrame.data)->action = HOLD;
+        ((struct button_action_data *) &canFrame.data)->action = HOLD;
         sendMessage(MESSAGE_MODULE_SPECIFIC_1, 1);
       }
     }

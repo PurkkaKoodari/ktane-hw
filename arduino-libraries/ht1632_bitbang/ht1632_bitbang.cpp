@@ -25,19 +25,19 @@ void HT1632::send_command(uint16_t command) {
   digitalWrite(cs_pin, HIGH);
 }
 
-void HT1632::begin() {
+void HT1632::begin(HT1632_ComMode com_mode) {
   pinMode(cs_pin, OUTPUT);
   pinMode(wr_pin, OUTPUT);
   pinMode(data_pin, OUTPUT);
   digitalWrite(cs_pin, HIGH);
   digitalWrite(data_pin, HIGH);
   
+  send_command(0b000110000); // rc master mode
+  send_command(0b000010000); // blink off
+  send_command(0b001000000 | (com_mode << 3));
+  send_command(0b101011110); // PWM 16/16
   send_command(0b000000010); // sys enable
   send_command(0b000000110); // led on
-  send_command(0b000110000); // master mode
-  send_command(0b000010000); // blink off
-  send_command(0b001000000); // NMOS8
-  send_command(0b101011110); // PWM 16/16
 }
 
 void HT1632::clear(uint8_t pattern) {
@@ -55,6 +55,10 @@ void HT1632::brightness(uint8_t value) {
   send_command(0b101000000 | (value << 1));
 }
 
+void HT1632::blink(bool blink) {
+  send_command(0b000010000 | ((blink & 1) << 1));
+}
+
 void HT1632::update() {
   digitalWrite(cs_pin, LOW);
   send_data(0b101, 3);
@@ -64,4 +68,3 @@ void HT1632::update() {
   }
   digitalWrite(cs_pin, HIGH);
 }
-

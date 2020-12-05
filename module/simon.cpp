@@ -19,22 +19,15 @@ unsigned long blink_until;
 bool pressed[4] = { 0, 0, 0, 0 };
 unsigned long debounce[4] = { 0, 0, 0, 0 };
 
-const uint8_t simon_button_pins[4] = { BUTTON_BLUE_PIN, BUTTON_YELLOW_PIN, BUTTON_GREEN_PIN, BUTTON_RED_PIN };
-const uint8_t simon_led_pins[4] = { LED_BLUE_PIN, LED_YELLOW_PIN, LED_GREEN_PIN, LED_RED_PIN };
+const uint8_t button_pins[4] = { BUTTON_BLUE_PIN, BUTTON_YELLOW_PIN, BUTTON_GREEN_PIN, BUTTON_RED_PIN };
+const uint8_t led_pins[4] = { LED_BLUE_PIN, LED_YELLOW_PIN, LED_GREEN_PIN, LED_RED_PIN };
 
 void moduleInitHardware() {
-  pinMode(LED_BLUE_PIN, OUTPUT);
-  digitalWrite(LED_BLUE_PIN, LOW);
-  pinMode(LED_YELLOW_PIN, OUTPUT);
-  digitalWrite(LED_YELLOW_PIN, LOW);
-  pinMode(LED_GREEN_PIN, OUTPUT);
-  digitalWrite(LED_GREEN_PIN, LOW);
-  pinMode(LED_RED_PIN, OUTPUT);
-  digitalWrite(LED_RED_PIN, LOW);
-  pinMode(BUTTON_BLUE_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_YELLOW_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_GREEN_PIN, INPUT_PULLUP);
-  pinMode(BUTTON_RED_PIN, INPUT_PULLUP);
+  for (uint8_t i = 0; i < 4; i++) {
+    pinMode(button_pins[i], INPUT_PULLUP);
+    digitalWrite(led_pins[i], LOW);
+    pinMode(led_pins[i], OUTPUT);
+  }
 }
 
 bool moduleHandleMessage(uint16_t messageId) {
@@ -56,8 +49,8 @@ void moduleLoop() {
       blinking = NONE;
     }
     for (uint8_t i = 0; i < 4; i++) {
-      digitalWrite(simon_led_pins[i], (blinking == i + 1) ? HIGH : LOW);
-      bool now = !digitalRead(simon_button_pins[i]);
+      digitalWrite(led_pins[i], (blinking == i + 1) ? HIGH : LOW);
+      bool now = !digitalRead(button_pins[i]);
       if (now != pressed[i] && millis() >= debounce[i]) {
         debounce[i] = millis() + SIMON_DEBOUNCE_LENGTH;
         pressed[i] = now;

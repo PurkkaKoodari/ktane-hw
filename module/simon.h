@@ -9,6 +9,8 @@
 #define VERSION_SW_MAJOR 1
 #define VERSION_SW_MINOR 0
 
+#define MODULE_NAME "Simon Says"
+
 #define LED_BLUE_PIN A0
 #define LED_YELLOW_PIN 4
 #define LED_GREEN_PIN A1

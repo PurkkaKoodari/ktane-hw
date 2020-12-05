@@ -7,18 +7,33 @@
 #include "wires.h"
 #include "password.h"
 #include "simon.h"
+#include "ventinggas.h"
+#include "button.h"
+#include "keypad.h"
 
 //////////////////////////// SANITY CHECKS ////////////////////////////
 
 #ifndef MODULE_TYPE
-#error "No module type set!"
+#error "No module type set."
+#endif
+#if MODULE_TYPE <= 0
+#error "Module id can't be zero or negative."
 #endif
 #if MODULE_TYPE > MODULEID_TYPE_MAX
-#error "Bad module id!"
+#error "Too large module id."
+#endif
+
+#if MODULE_SERIAL < 0
+#error "Module serial can't be negative."
 #endif
 #if MODULE_SERIAL > MODULEID_SERIAL_MAX
-#error "Bad module serial!"
+#error "Too large module serial."
 #endif
+
+#ifndef MODULE_NAME
+#error "No module name set. New module and header not #included in module.ino?"
+#endif
+
 #if !defined(NO_STATUS_LED) && (!defined(STRIKE_LED_PIN) || !defined(SOLVE_LED_PIN))
 #error "Either NO_STATUS_LED or STRIKE_LED_PIN and SOLVE_LED_PIN must be defined"
 #endif
@@ -46,8 +61,24 @@ void messageReceived() {
 void sendMessage(uint16_t message_id, uint8_t dlc) {
   canFrame.can_id = CAN_EFF_FLAG | CAN_TX_ID | (message_id << MESSAGE_ID_OFFSET);
   canFrame.can_dlc = dlc;
+#ifdef DEBUG_CAN_MESSAGES
+#ifdef DEBUG
+  DEBUG_PRINT("TX id ");
+  DEBUG_PRINT2(canFrame.can_id, 16);
+  DEBUG_PRINT(" dlc ");
+  DEBUG_PRINT2(canFrame.can_dlc, 16);
+  DEBUG_PRINT(" data");
+  for (int i = 0; i < canFrame.can_dlc; i++) {
+    DEBUG_PRINT(" ");
+    DEBUG_PRINT2(canFrame.data[i], 16);
+  }
+  DEBUG_PRINTLN("");
+#endif
+#endif
   if (canBus.sendMessage(&canFrame) != MCP2515::ERROR_OK) {
-    DEBUG_PRINTLN("tx failed");
+    DEBUG_PRINTLN("TX failed");
+  } else {
+    DEBUG_PRINTLN("TX succeeded");
   }
 }
 
@@ -81,7 +112,7 @@ void initHardware() {
 }
 
 void resetModule() {
-  DEBUG_PRINTLN("resetting module");
+  DEBUG_PRINTLN("Resetting module");
   mode = RESET;
   digitalWrite(MODULE_READY_PIN, LOW);
   timer_started = false;
@@ -93,15 +124,19 @@ void resetModule() {
 }
 
 void handleMessage() {
+#ifdef DEBUG_CAN_MESSAGES
 #ifdef DEBUG
-  char statusMsg[64];
-  char hexNumber[4];
-  sprintf(statusMsg, "rx id %08x dlc %hhx data", canFrame.can_id, canFrame.can_dlc);
+  DEBUG_PRINT("RX id ");
+  DEBUG_PRINT2(canFrame.can_id, 16);
+  DEBUG_PRINT(" dlc ");
+  DEBUG_PRINT2(canFrame.can_dlc, 16);
+  DEBUG_PRINT(" data");
   for (int i = 0; i < canFrame.can_dlc; i++) {
-    sprintf(hexNumber, " %02x", canFrame.data[i]);
-    strcat(statusMsg, hexNumber);
+    DEBUG_PRINT(" ");
+    DEBUG_PRINT2(canFrame.data[i], 16);
   }
-  DEBUG_PRINTLN(statusMsg);
+  DEBUG_PRINTLN("");
+#endif
 #endif
 
   uint16_t messageId = (uint16_t) ((canFrame.can_id & MESSAGE_ID_MASK) >> MESSAGE_ID_OFFSET);
@@ -115,7 +150,7 @@ void handleMessage() {
   
   switch (messageId) {
   case MESSAGE_PING:
-    DEBUG_PRINT("responding to ping ");
+    DEBUG_PRINT("Responding to ping ");
     DEBUG_PRINTLN(((struct ping_data *) &canFrame.data)->number);
     sendMessage(MESSAGE_PING, 1);
     break;
@@ -125,23 +160,23 @@ void handleMessage() {
       sendError(MESSAGE_RECOVERED_ERROR, ERROR_INVALID_MESSAGE);
       return;
     }
-    DEBUG_PRINTLN("game starting!");
+    DEBUG_PRINTLN("Game starting!");
     mode = GAME;
     moduleStartGame();
     break;
   case MESSAGE_START_TIMER:
-    DEBUG_PRINTLN("timer starting!");
+    DEBUG_PRINTLN("Timer starting!");
     timer_started = true;
     moduleStartTimer();
     break;
   case MESSAGE_EXPLODE:
-    DEBUG_PRINTLN("bomb exploded!");
+    DEBUG_PRINTLN("Bomb exploded!");
     game_ended = true;
     exploded = true;
     moduleExplode();
     break;
   case MESSAGE_DEFUSE:
-    DEBUG_PRINTLN("bomb defused!");
+    DEBUG_PRINTLN("Bomb defused!");
     game_ended = true;
     moduleDefuse();
     break;
@@ -173,17 +208,18 @@ void handleMessage() {
     if (moduleHandleMessage(messageId))
       break;
   default:
-    DEBUG_PRINTLN("unknown message received");
+    DEBUG_PRINTLN("Unknown message received");
     sendError(MESSAGE_RECOVERED_ERROR, ERROR_INVALID_MESSAGE);
     break;
   }
 }
 
 void setup() {
-#ifdef DEBUG
   Serial.begin(9600);
-#endif
-  DEBUG_PRINTLN("can init");
+  Serial.println("BombGame module starting");
+  Serial.println("Module: " MODULE_NAME " (id " QUOTE2(MODULE_TYPE) ")");
+  Serial.println("Version: HW/" QUOTE2(VERSION_HW_MAJOR) "." QUOTE2(VERSION_HW_MINOR) " SW/" QUOTE2(VERSION_SW_MAJOR) "." QUOTE2(VERSION_SW_MINOR));
+  DEBUG_PRINTLN("CAN init");
   while (true) {
     if (canBus.reset() != MCP2515::ERROR_OK) goto can_init_fail;
     if (canBus.setBitrate(CAN_100KBPS, MCP_8MHZ) != MCP2515::ERROR_OK) goto can_init_fail;
@@ -193,20 +229,20 @@ void setup() {
     if (canBus.setNormalMode() != MCP2515::ERROR_OK) goto can_init_fail;
     break;
     can_init_fail:
-    DEBUG_PRINTLN("can init failed, retrying");
+    Serial.println("CAN init failed, retrying");
     delay(100);
   }
-  DEBUG_PRINTLN("can init success");
+  DEBUG_PRINTLN("CAN init success");
   initHardware();
   resetModule();
   attachInterrupt(digitalPinToInterrupt(MCP_INTERRUPT_PIN), messageReceived, FALLING);
-  DEBUG_PRINTLN("module init success");
+  Serial.println("Module init success");
 }
 
 void loop() {
   if (mode == RESET && !digitalRead(MODULE_ENABLE_PIN)) {
     digitalWrite(MODULE_READY_PIN, HIGH);
-    DEBUG_PRINTLN("announcing module");
+    DEBUG_PRINTLN("Announcing module");
     *(struct announce_data *) &canFrame.data = {
       VERSION_HW_MAJOR, VERSION_HW_MINOR,
       VERSION_SW_MAJOR, VERSION_SW_MINOR,
@@ -242,24 +278,39 @@ void loop() {
       if (canBus.readMessage(MCP2515::RXB0, &canFrame) == MCP2515::ERROR_OK) {
         handleMessage();
       } else {
-        DEBUG_PRINTLN("rx RXB0 failed");
+        DEBUG_PRINTLN("Read from RXB0 failed");
       }
     }
     if (intByte & MCP2515::CANINTF_RX1IF) {
       if (canBus.readMessage(MCP2515::RXB1, &canFrame) == MCP2515::ERROR_OK) {
         handleMessage();
       } else {
-        DEBUG_PRINTLN("rx RXB1 failed");
+        DEBUG_PRINTLN("Read from RXB1 failed");
       }
     }
     if (intByte & MCP2515::CANINTF_MERRF) {
-      DEBUG_PRINTLN("message error");
+      DEBUG_PRINTLN("Message error");
       canBus.clearMERR();
     }
     if (intByte & MCP2515::CANINTF_ERRIF) {
-      DEBUG_PRINT("error state ");
-      DEBUG_PRINTLN2(canBus.getErrorFlags(), 2);
+      uint8_t errByte = canBus.getErrorFlags();
       canBus.clearRXnOVR();
+      DEBUG_PRINTLN("MCP2515 error state:");
+      if (errByte & MCP2515::EFLG_RX1OVR) {
+        DEBUG_PRINTLN("RXB1 overflow");
+      }
+      if (errByte & MCP2515::EFLG_RX0OVR) {
+        DEBUG_PRINTLN("RXB0 overflow");
+      }
+      if (errByte & MCP2515::EFLG_TXBO) {
+        DEBUG_PRINTLN("Bus-Off mode");
+      }
+      if (errByte & MCP2515::EFLG_TXEP) {
+        DEBUG_PRINTLN("TX Error-Passive");
+      }
+      if (errByte & MCP2515::EFLG_RXEP) {
+        DEBUG_PRINTLN("RX Error-Passive");
+      }
     }
   }
 }

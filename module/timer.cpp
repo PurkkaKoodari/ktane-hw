@@ -15,12 +15,10 @@ uint16_t timer_speed;
 uint8_t strikes;
 uint8_t max_strikes;
 
-#define VERSION_HW_MAJOR 2
-
 #if VERSION_HW_MAJOR == 0
 HT1632 matrix(HT1632_DATA_PIN, HT1632_WR_PIN, HT1632_CS_PIN, 5, 8);
 #elif VERSION_HW_MAJOR == 1
-//Adafruit_LEDBackpack matrix = Adafruit_LEDBackpack();
+Adafruit_LEDBackpack matrix = Adafruit_LEDBackpack();
 #endif
 
 const uint8_t digits_7seg[10] = {

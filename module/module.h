@@ -4,12 +4,20 @@
 #include <Arduino.h>
 #include <can.h>
 
+//////////////////////////// UTILITY MACROS ////////////////////////////
+#define QUOTE(arg) #arg
+#define QUOTE2(arg) QUOTE(arg)
+
 //////////////////////////// MODULE TYPE CONSTANTS ////////////////////////////
 
 #define MODULE_TYPE_TIMER 1
 #define MODULE_TYPE_WIRES 2
-#define MODULE_TYPE_PASSWORD 4
+#define MODULE_TYPE_BUTTON 3
+#define MODULE_TYPE_KEYPAD 4
 #define MODULE_TYPE_SIMON_SAYS 5
+#define MODULE_TYPE_COMPLICATED_WIRES 9`
+#define MODULE_TYPE_PASSWORD 12
+#define MODULE_TYPE_VENTING_GAS 13
 
 //////////////////////////// INCLUDE CONFIG FILE ////////////////////////////
 #include "module_config.h"

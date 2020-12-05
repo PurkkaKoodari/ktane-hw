@@ -1,1 +1,9 @@
+# build results
 build/
+*.hex
+*.elf
+*.bin
+
+# generated files
+*.gen.h
+*.gen.cpp

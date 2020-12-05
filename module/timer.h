@@ -9,6 +9,8 @@
 #define VERSION_SW_MAJOR 1
 #define VERSION_SW_MINOR 0
 
+#define MODULE_NAME "Timer"
+
 #if VERSION_HW_MAJOR == 0
 
 #include <ht1632_bitbang.h>

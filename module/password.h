@@ -9,10 +9,19 @@
 #define VERSION_SW_MAJOR 1
 #define VERSION_SW_MINOR 0
 
-#include <ht1632_bitbang.h>
+#define MODULE_NAME "Password"
 
-#define HT1632_WR_PIN 7
-#define HT1632_DATA_PIN 8
-#define HT1632_CS_PIN 9
+#include <ht1632_bitbang.h>
+#include "password_font.h"
+
+#define HT1632_WR_PIN 4
+#define HT1632_DATA_PIN 3
+#define HT1632_CS_PIN 5
+
+#define BTN_PIN_0 6
+#define BTN_PIN_1 7
+#define BTN_PIN_2 9
+#define BTN_PIN_3 A4
+#define SUBMIT_PIN A5
 
 #endif

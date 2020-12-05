@@ -5,7 +5,7 @@ from time import monotonic
 from typing import List, Dict, Optional, Coroutine
 
 from bombgame.audio import load_sounds, register_sound, AudioLocation, stop_all_sounds, play_sound
-from bombgame.bomb.serial import BombSerial
+from bombgame.bomb.edgework import Edgework
 from bombgame.bomb.state import BombState
 from bombgame.bus.bus import BombBus
 from bombgame.bus.messages import (BusMessage, ResetMessage, AnnounceMessage, DefuseBombMessage, ExplodeBombMessage,
@@ -37,8 +37,7 @@ class Bomb(EventSource):
     strikes: int
     time_left: float
     timer_speed: float
-    widgets: list  # TODO fix the type
-    serial_number: BombSerial
+    edgework: Edgework
     _state: BombState
     _init_location: Optional[int]
     _state_lock: Lock
@@ -46,7 +45,7 @@ class Bomb(EventSource):
     _gpio: AbstractGpio
     _running_tasks: List[Task]
 
-    def __init__(self, bus: BombBus, gpio: AbstractGpio, casing: Casing, *, serial_number: str = None):
+    def __init__(self, bus: BombBus, gpio: AbstractGpio, casing: Casing):
         super().__init__()
         self._bus = bus
         self._gpio = gpio
@@ -58,8 +57,7 @@ class Bomb(EventSource):
         self.strikes = 0
         self.time_left = 0.0
         self.timer_speed = 1.0
-        self.widgets = []  # TODO fill and control these
-        self.serial_number = BombSerial.generate() if serial_number is None else BombSerial(serial_number)
+        self.edgework = Edgework()
         self._state = BombState.UNINITIALIZED
         self._init_location = None
         self._state_lock = Lock()
@@ -105,6 +103,7 @@ class Bomb(EventSource):
                 return
             finally:
                 await self._gpio.set_enable(location, False)
+        self._init_location = None
         # check that we have a timer module somewhere
         if not any(isinstance(module, TimerModule) for module in self.modules):
             self._init_fail("no timer found on bomb")
@@ -160,7 +159,7 @@ class Bomb(EventSource):
             self.trigger(BombError(None, BombErrorLevel.WARNING,
                                    f"A module was added at {self.casing.location(change.location)} "
                                    f"after initialization started."))
-        elif self._state != BombState.INITIALIZING or (change.location != self._init_location and change.location not in self.modules_by_location):
+        elif change.location != self._init_location and change.location not in self.modules_by_location:
             # TODO handle cases where a module becomes unready during initialization
             self.trigger(BombError(None, BombErrorLevel.WARNING,
                                    f"A module was removed at {self.casing.location(change.location)} "
@@ -298,6 +297,13 @@ class Bomb(EventSource):
         self.trigger(ModuleStriked(module))
         play_sound(STRIKE_SOUND)
         return False
+
+    @property
+    def timer_digits(self):
+        # may not be perfectly synced with module when < 1 minute, but is close enough
+        if self.time_left < 60:
+            return f"{int(self.time_left):02d}{int(self.time_left % 1 * 100):02d}"
+        return f"{int(self.time_left // 60):02d}{int(self.time_left % 60):02d}"
 
 
 STRIKE_SOUND = register_sound(Bomb, "strike.wav", AudioLocation.BOMB_ONLY)

@@ -71,7 +71,7 @@ class SimonSaysModule(Module):
         }
 
     def _color_map(self):
-        vowels = self._bomb.serial_number.has(VOWELS)
+        vowels = self._bomb.edgework.serial_number.has(VOWELS)
         strikes = min(self._bomb.strikes, 2)
         return dict(zip(MAPPING_FLASHED, MAPPING_PRESSED[vowels, strikes]))
 

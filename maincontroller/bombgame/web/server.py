@@ -234,7 +234,7 @@ class WebInterface(EventSource):
                     await _invalid_message(client, "password is incorrect", 4003)
             # TODO send current state
             await self._send_to_client(ConfigMessage({}), client)
-            await self._send_to_client(BombInfoMessage(self._bomb.serial_number), client)
+            await self._send_to_client(BombInfoMessage(self._bomb.edgework.serial_number), client)
             for module in self._bomb.modules:
                 await self._send_module(module, client)
             await self._send_to_client(StateMessage(self._bomb._state.name), client)
@@ -295,7 +295,7 @@ class WebInterface(EventSource):
     async def _initialize_bomb(self):
         await self._send_to_client(ResetMessage())
         self._bomb = Bomb(self._bus, self._gpio, BOMB_CASING)
-        await self._send_to_client(BombInfoMessage(self._bomb.serial_number))
+        await self._send_to_client(BombInfoMessage(self._bomb.edgework.serial_number))
         self._bomb.add_listener(BombModuleAdded, self._handle_module_add)
         self._bomb.add_listener(BombStateChanged, self._handle_bomb_state)
         self._bomb.add_listener(ModuleStateChanged, self._handle_module_update)

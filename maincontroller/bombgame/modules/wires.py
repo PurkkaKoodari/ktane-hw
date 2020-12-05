@@ -87,7 +87,7 @@ class WiresModule(Module):
         bomb.add_listener(BombStateChanged, self._handle_bomb_state)
 
     def generate(self):
-        last_odd = self._bomb.serial_number.last_is(ODD)
+        last_odd = self._bomb.edgework.serial_number.last_is(ODD)
         count = randint(3, 6)
         self._wires = [choice(list(WireColor.__members__.values())) for _ in range(count)]
         indices = sample(range(6), count)

@@ -484,7 +484,7 @@ Connection ~ 3150 8050
 Wire Wire Line
 	3150 8050 3150 7800
 Text GLabel 3250 7800 1    50   Input ~ 0
-D10
+A4_SDA
 Text GLabel 3150 7800 1    50   Input ~ 0
 D9
 Text GLabel 3050 7800 1    50   Input ~ 0

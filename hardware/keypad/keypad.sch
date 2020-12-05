@@ -110,13 +110,13 @@ Wire Wire Line
 Wire Wire Line
 	1500 5450 1600 5450
 Text GLabel 2200 5450 2    50   Input ~ 0
-D10
+A4_SDA
 Text GLabel 2200 3950 2    50   Input ~ 0
 D7
 Text GLabel 4200 3950 2    50   Input ~ 0
 D9
 Text GLabel 4200 5450 2    50   Input ~ 0
-A6
+A5_SCL
 Wire Wire Line
 	4200 5450 4100 5450
 Wire Wire Line

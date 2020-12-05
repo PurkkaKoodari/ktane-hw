@@ -64,7 +64,7 @@ class Gpio(AbstractGpio):
     _mcps: List[mcp23017.MCP23017]
     _modules: List[_ModuleInfo]
     _widgets: List[_WidgetInfo]
-    _prev_ready: List[bool]
+    _ready: List[bool]
     _lock: Lock
     _poller: Optional[Task]
     _executor: AuxiliaryThreadExecutor
@@ -76,7 +76,7 @@ class Gpio(AbstractGpio):
         self._mcps = []
         self._modules = []
         self._widgets = []
-        self._prev_ready = [False] * casing.capacity
+        self._ready = [False] * casing.capacity
         self._lock = Lock()
         self._poller = None
         self._executor = AuxiliaryThreadExecutor(name="GPIO")
@@ -155,16 +155,16 @@ class Gpio(AbstractGpio):
         """Polls for changes in module ready pins and returns the locations of currently connected modules."""
         async with self._lock:
             await get_running_loop().run_in_executor(self._executor, self._sync_check_ready_changes)
-        return [location for location in range(len(self._modules)) if self._prev_ready[location]]
+        return [location for location in range(len(self._modules)) if self._ready[location]]
 
     def _sync_check_ready_changes(self):
         for mcp in self._mcps:
             mcp.begin_read()
         for location, module in enumerate(self._modules):
             current = module.mcp.read_pin(None, module.ready)
-            if current != self._prev_ready[location]:
+            if current != self._ready[location]:
                 self.trigger(ModuleReadyChange(location, current))
-            self._prev_ready[location] = current
+            self._ready[location] = current
         for mcp in self._mcps:
             mcp.end_read()
 

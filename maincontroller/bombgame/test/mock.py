@@ -140,7 +140,7 @@ class MockPhysicalModule(ABC, EventSource):
         if message.module != ModuleId.BROADCAST and message.module != self.module_id:
             return
         if isinstance(message, ResetMessage):
-            await self.hard_reset()
+            self.hard_reset()
             return
         if self.state == PhysicalModuleState.RESET:
             return

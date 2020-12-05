@@ -152,6 +152,8 @@ extern can_frame canFrame;
 
 void sendMessage(uint16_t message_id, uint8_t data_length);
 
+void sendError(uint16_t message_id, uint8_t code);
+
 //////////////////////////// MODULE SPECIFIC FUNCTIONS ////////////////////////////
 
 void moduleInitHardware();

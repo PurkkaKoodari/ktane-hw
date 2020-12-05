@@ -24,4 +24,7 @@
 #define BTN_PIN_3 A4
 #define SUBMIT_PIN A5
 
+#define STRIKE_LED_PIN A0
+#define SOLVE_LED_PIN A1
+
 #endif

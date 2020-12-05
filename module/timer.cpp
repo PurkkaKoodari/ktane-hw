@@ -58,10 +58,10 @@ void moduleInitHardware() {
 #elif VERSION_HW_MAJOR == 1
   matrix.begin(0x70);
 #endif
+  digitalWrite(STRIKE_1_PIN, HIGH);
   pinMode(STRIKE_1_PIN, OUTPUT);
-  digitalWrite(STRIKE_1_PIN, LOW);
+  digitalWrite(STRIKE_2_PIN, HIGH);
   pinMode(STRIKE_2_PIN, OUTPUT);
-  digitalWrite(STRIKE_2_PIN, LOW);
 }
 
 void moduleReset() {
@@ -103,8 +103,8 @@ void moduleLoop() {
       matrix.clear();
       matrix.writeDisplay();
 #endif
-      digitalWrite(STRIKE_1_PIN, LOW);
-      digitalWrite(STRIKE_2_PIN, LOW);
+      digitalWrite(STRIKE_1_PIN, HIGH);
+      digitalWrite(STRIKE_2_PIN, HIGH);
     } else {
       if (seconds_left == 0xffff) {
 #if VERSION_HW_MAJOR == 0
@@ -173,11 +173,11 @@ void moduleLoop() {
       matrix.writeDisplay();
 #endif
       if (strikes == 0) {
-        digitalWrite(STRIKE_1_PIN, LOW);
-        digitalWrite(STRIKE_2_PIN, LOW);
-      } else if (strikes == 1) {
         digitalWrite(STRIKE_1_PIN, HIGH);
-        digitalWrite(STRIKE_2_PIN, LOW);
+        digitalWrite(STRIKE_2_PIN, HIGH);
+      } else if (strikes == 1) {
+        digitalWrite(STRIKE_1_PIN, LOW);
+        digitalWrite(STRIKE_2_PIN, HIGH);
       } else {
         bool state = millis() % 200 < 100 ? HIGH : LOW;
         digitalWrite(STRIKE_1_PIN, state);

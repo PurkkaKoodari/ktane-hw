@@ -1,3 +1,5 @@
 (sym_lib_table
-  (lib (name large7segment)(type Legacy)(uri ${KIPRJMOD}/large7segment.lib)(options "")(descr ""))
+  (lib (name ProjectDisplays)(type Legacy)(uri ${KIPRJMOD}/../symbols/ProjectDisplays/ProjectDisplays.lib)(options "")(descr ""))
+  (lib (name ProjectChips)(type Legacy)(uri ${KIPRJMOD}/../symbols/ProjectChips/ProjectChips.lib)(options "")(descr ""))
+  (lib (name WAVGAT_CAN)(type Legacy)(uri "${KIPRJMOD}/../symbols/WAVGAT CAN/WAVGAT_CAN.lib")(options "")(descr ""))
 )

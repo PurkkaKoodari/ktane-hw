@@ -1,4 +1,4 @@
-update=1.5.2020 1.36.34
+update=1.5.2020 1.38.23
 version=1
 last_client=kicad
 [general]
@@ -15,7 +15,7 @@ LibDir=
 [pcbnew]
 version=1
 PageLayoutDescrFile=
-LastNetListRead=timer.net
+LastNetListRead=
 CopperLayerCount=2
 BoardThickness=1.6
 AllowMicroVias=0
@@ -29,14 +29,10 @@ MinMicroViaDiameter=0.2
 MinMicroViaDrill=0.09999999999999999
 MinHoleToHole=0.25
 TrackWidth1=0.25
-TrackWidth2=0.25
-TrackWidth3=0.35
-TrackWidth4=0.5
-TrackWidth5=1
+TrackWidth2=0.35
+TrackWidth3=0.5
 ViaDiameter1=0.8
 ViaDrill1=0.4
-ViaDiameter2=1.6
-ViaDrill2=0.8
 dPairWidth1=0.2
 dPairGap1=0.25
 dPairViaGap1=0.25
@@ -245,10 +241,10 @@ dPairViaGap=0.25
 [schematic_editor]
 version=1
 PageLayoutDescrFile=
-PlotDirectoryName=./
+PlotDirectoryName=.
 SubpartIdSeparator=0
 SubpartFirstId=65
-NetFmtName=Pcbnew
+NetFmtName=
 SpiceAjustPassiveValues=0
 LabSize=50
 ERC_TestSimilarLabels=1

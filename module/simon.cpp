@@ -5,7 +5,7 @@
 #define SIMON_BLINK_LENGTH 500
 #define SIMON_DEBOUNCE_LENGTH 50
 
-enum simon_color {
+enum simon_color : uint8_t {
     NONE = 0, BLUE = 1, YELLOW = 2, GREEN = 3, RED = 4
 };
 

@@ -9,7 +9,7 @@ bool pressed = 0;
 unsigned long hold_trigger = 0;
 unsigned long debounce = 0;
 
-enum button_action {
+enum button_action : uint8_t {
     PRESS = 0, HOLD = 1, RELEASE_PRESS = 2, RELEASE_HOLD = 3
 };
 

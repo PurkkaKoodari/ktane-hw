@@ -138,7 +138,7 @@ struct error_data {
 
 //////////////////////////// GLOBAL DATA ////////////////////////////
 
-enum module_mode {
+enum module_mode : uint8_t {
   RESET, INITIALIZATION, CONFIGURATION, GAME
 };
 

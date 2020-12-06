@@ -114,7 +114,7 @@ class Edgework:
         return Indicator(name, None)
 
     def ports(self, type_: Optional[PortType] = None):
-        return sum(port.type == type_ for widget in self.port_plates for port in widget.ports)
+        return sum(port == type_ for widget in self.port_plates for port in widget.ports)
 
     @property
     def port_plates(self) -> List[PortPlate]:

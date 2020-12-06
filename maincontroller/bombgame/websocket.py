@@ -50,9 +50,11 @@ class SingleClientWebSocketServer(ABC):
         except ConnectionClosed:
             LOGGER.warning("Client %s disconnected during handshake", client.remote_address)
             return
+        LOGGER.debug("Client %s completed handshake", client.remote_address)
         old_client = self._client
         self._client = client
         if old_client:
+            LOGGER.debug("Disconnecting previous client %s", old_client.remote_address)
             await old_client.close(4000)
         try:
             while True:

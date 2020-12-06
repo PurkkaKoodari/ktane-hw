@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from asyncio import create_task, get_event_loop, Future, Event, Task
 from logging import getLogger
@@ -8,12 +10,14 @@ from websockets import connect, WebSocketClientProtocol, ConnectionClosed
 from bombgame.bomb.state import BombState
 from bombgame.config import DMX_SERVER, ROOM_SERVER, ROOM_DMX_ENABLED
 from bombgame.events import BombStateChanged, TimerTick, BombChanged
+from bombgame.roomserver.common import RoomServerChannel
+from bombgame.roomserver.client import RoomServerClient
 from bombgame.utils import log_errors
 from bombgame.websocket import InvalidMessage
 
 if TYPE_CHECKING:
     from bombgame.controller import BombGameController
-    from bombgame.roomserver import RoomServerClient, RoomServerChannel, RoomServer
+    from bombgame.roomserver.server import RoomServer
 
 LOGGER = getLogger("DMX")
 
@@ -41,7 +45,7 @@ class DMXBackend(ABC):
     def add_room_server_handler(self, room_server: RoomServer):
         room_server.add_handler(RoomServerChannel.DMX, self._handle_dmx_message)
 
-    def _handle_dmx_message(self, data: dict):
+    async def _handle_dmx_message(self, data: dict):
         scene = data.get("scene")
         if not isinstance(scene, str):
             raise InvalidMessage("invalid scene")
@@ -66,7 +70,7 @@ class QLCPlusApi:
         if self._close_requested or self._connection is not None:
             raise RuntimeError("already started or stopped")
         LOGGER.info("Connecting to QLC+ API")
-        self._connection = await connect(self._url)
+        self._connection = await connect(self._url, ping_interval=None, ping_timeout=None)
         create_task(log_errors(self._client_receiver()))
 
     async def stop(self):
@@ -94,21 +98,27 @@ class QLCPlusApi:
                     LOGGER.warning("Response from QLC+ to %s without matching request", action)
                     continue
                 LOGGER.debug("Response from QLC+ to %s", action)
-                self._pending_requests[action].set_result(results)
+                self._pending_requests.pop(action).set_result(results)
         except ConnectionClosed as ex:
             if not self._close_requested:
                 LOGGER.error("QLC+ API connection closed unexpectedly (code %s)", ex.code)
         finally:
             self._connection = None
 
-    async def call(self, action: str, *params: str) -> Sequence[str]:
+    async def call(self, action: str, *params: str, expect_response: Optional[bool] = None) -> Optional[Sequence[str]]:
+        expect_response = expect_response is True or (expect_response is None and action.startswith("get"))
         if self._connection is None:
             raise RuntimeError("QLC+ API client not started yet")
         if action in self._pending_requests:
             raise ValueError(f"request {action} already pending")
-        future = self._pending_requests[action] = get_event_loop().create_future()
+        if expect_response:
+            future = self._pending_requests[action] = get_event_loop().create_future()
+        LOGGER.debug("Request %s to QLC+", action)
         await self._connection.send(f"QLC+API|" + "|".join([action, *params]))
-        return await future
+        if expect_response:
+            return await future
+        else:
+            return None
         
 
 class QLCPlusDMXBackend(DMXBackend):
@@ -139,7 +149,7 @@ class QLCPlusDMXBackend(DMXBackend):
         names = function_list[1::2]
         scene_ids = {}
         for function_id, name in zip(ids, names):
-            scene_ids[function_id] = name
+            scene_ids[name] = function_id
 
         missing_scenes = set(ALL_SCENES) - set(scene_ids.keys())
         if missing_scenes:
@@ -147,6 +157,7 @@ class QLCPlusDMXBackend(DMXBackend):
             return
 
         # turn off all relevant scenes
+        LOGGER.debug("Turning off all scenes")
         for scene in ALL_SCENES:
             await self._api.call("setFunctionStatus", scene_ids[scene], "0")
 
@@ -157,8 +168,10 @@ class QLCPlusDMXBackend(DMXBackend):
             next_scene = self._next_scene
 
             if next_scene == current_scene:
+                LOGGER.debug("Current scene is already %s", next_scene)
                 continue
 
+            LOGGER.debug("Changing scene to %s", next_scene)
             if current_scene is not None:
                 await self._api.call("setFunctionStatus", scene_ids[current_scene], "0")
             await self._api.call("setFunctionStatus", scene_ids[next_scene], "1")

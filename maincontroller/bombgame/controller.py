@@ -1,6 +1,5 @@
-from asyncio import run, Task, create_task
+from asyncio import Task, create_task
 from logging import getLogger
-from sys import argv
 from typing import Optional
 
 import can
@@ -12,10 +11,9 @@ from bombgame.config import BOMB_CASING, CAN_CONFIG, ROOM_SERVER
 from bombgame.dmx import DMXController, initialize_bomb_dmx
 from bombgame.events import BombChanged
 from bombgame.gpio import Gpio, AbstractGpio
-from bombgame.logging import init_logging
 from bombgame.modules import load_modules
-from bombgame.roomserver import RoomServerClient
-from bombgame.utils import FatalError, EventSource, log_errors, handle_sigint
+from bombgame.roomserver.client import RoomServerClient
+from bombgame.utils import FatalError, EventSource, log_errors
 from bombgame.web.server import WebInterface, initialize_web_ui
 
 LOGGER = getLogger("BombGame")
@@ -79,6 +77,7 @@ class BombGameController(EventSource):
             self.room_server = RoomServerClient()
             await self.room_server.start()
         self.sound_system = BombSoundSystem(self.room_server)
+        await self.sound_system.start()
         self.bus = BombBus(self.can_bus)
         self.bus.add_listener(FatalError, handle_fatal_error)
         self.bus.start()
@@ -104,18 +103,3 @@ class BombGameController(EventSource):
     def reset(self):
         self._deinitialize_bomb()
         create_task(log_errors(self._initialize_bomb()))
-
-
-async def main():
-    verbose = "-v" in argv
-    init_logging(verbose)
-    LOGGER.info("Starting. Exit cleanly with SIGINT/Ctrl-C")
-    quit_evt = handle_sigint()
-    game = BombGameController()
-    await game.start()
-    await quit_evt.wait()
-    await game.stop()
-    LOGGER.info("Exiting")
-
-if __name__ == "__main__":
-    run(main())

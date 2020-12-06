@@ -15,14 +15,15 @@
 #define VERSION_SW_MAJOR 1
 #define VERSION_SW_MINOR 0
 
-#define OUTPUT_PINS A1, A4
-#define INPUT_PINS A5, A6, A7
-
 #if MODULE_TYPE == MODULE_TYPE_COMPLICATED_WIRES
-#define LED_PINS 9, 6, 5, 3, 7, 4
+#define WIRE_PINS A0, A1, A4, A5, A6, A7
+#define LED_ROW_PINS 4, 7
+#define LED_COLUMN_PINS 6, 5, 3
+#else
+#define WIRE_PINS A7, A6, A5, A4, A1, A0
 #endif
 
-#define STRIKE_LED_PIN A0
+#define STRIKE_LED_PIN 9
 #define SOLVE_LED_PIN 10
 
 #endif

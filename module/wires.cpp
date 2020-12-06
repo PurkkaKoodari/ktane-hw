@@ -14,8 +14,7 @@ enum wire_color last_detected_wires[6] = { DISCONNECTED, DISCONNECTED, DISCONNEC
 uint8_t consecutive_measurements[6] = { 0, 0, 0, 0, 0, 0 };
 enum wire_color sent_wires[6] = { DISCONNECTED, DISCONNECTED, DISCONNECTED, DISCONNECTED, DISCONNECTED, DISCONNECTED };
 
-const uint8_t output_pins[6] = { OUTPUT_PINS };
-const uint8_t input_pins[6] = { INPUT_PINS };
+const uint8_t wire_pins[6] = { WIRE_PINS };
 const int16_t color_voltages[7] = {
   409, // red: 2V
   614, // blue: 3V
@@ -33,7 +32,10 @@ const char *color_names[8] = {
 #endif
 
 #if MODULE_TYPE == MODULE_TYPE_COMPLICATED_WIRES
-const uint8_t led_pins[6] = { LED_PINS };
+const uint8_t led_row_pins[2] = { LED_ROW_PINS };
+const uint8_t led_column_pins[3] = { LED_COLUMN_PINS };
+
+uint8_t led_states;
 #endif
 
 struct wire_colors_data {
@@ -46,17 +48,17 @@ struct wire_leds_data {
 #endif
 
 void moduleInitHardware() {
-  for (uint8_t i = 0; i < 2; i++) {
-    digitalWrite(output_pins[i], LOW);
-    pinMode(output_pins[i], INPUT);
-  }
-  for (uint8_t i = 0; i < 3; i++) {
-    pinMode(input_pins[i], INPUT);
+  for (uint8_t i = 0; i < 6; i++) {
+    pinMode(wire_pins[i], INPUT);
   }
 #if MODULE_TYPE == MODULE_TYPE_COMPLICATED_WIRES
-  for (uint8_t i = 0; i < 6; i++) {
-    digitalWrite(led_pins[i], LOW);
-    pinMode(led_pins[i], OUTPUT);
+  for (uint8_t i = 0; i < 2; i++) {
+    digitalWrite(led_row_pins[i], LOW);
+    pinMode(led_row_pins[i], OUTPUT);
+  }
+  for (uint8_t i = 0; i < 3; i++) {
+    digitalWrite(led_column_pins[i], HIGH);
+    pinMode(led_column_pins[i], OUTPUT);
   }
 #endif
 }
@@ -65,10 +67,7 @@ bool moduleHandleMessage(uint16_t messageId) {
 #if MODULE_TYPE == MODULE_TYPE_COMPLICATED_WIRES
   switch (messageId) {
   case MESSAGE_MODULE_SPECIFIC_1:
-    uint8_t leds = (uint8_t) ((struct wire_leds_data *) &canFrame.data)->leds;
-    for (uint8_t i = 0; i < 6; i++) {
-      digitalWrite(led_pins[i], (leds >> i) & 1);
-    }
+    led_states = (uint8_t) ((struct wire_leds_data *) &canFrame.data)->leds;
     return true;
   default:
     return false;
@@ -78,46 +77,49 @@ bool moduleHandleMessage(uint16_t messageId) {
 #endif
 }
 
+uint8_t current_led_row = 0;
+
 void moduleLoop() {
+#if MODULE_TYPE == MODULE_TYPE_COMPLICATED_WIRES
+  digitalWrite(led_row_pins[current_led_row], LOW);
+  current_led_row = (current_led_row + 1) % 2;
+  digitalWrite(led_row_pins[current_led_row], HIGH);
+  uint8_t led = current_led_row * 3;
+  for (uint8_t i = 0; i < 3; i++) {
+    digitalWrite(led_column_pins[i], (led_states >> led) & 1);
+    led++;
+  }
+#endif
+
   if (mode == CONFIGURATION || mode == GAME) {
-    uint8_t wire = 0;
     bool changed = false;
-    for (uint8_t output = 0; output < 2; output++) {
-      digitalWrite(output_pins[output], LOW);
-      pinMode(output_pins[output], OUTPUT);
-      delayMicroseconds(200);
-
-      for (uint8_t input = 0; input < 3; input++) {
-        // detect wire color
-        int16_t read_value = analogRead(input_pins[input]);
-        enum wire_color detected = INVALID;
-        for (uint8_t color = 0; color <= 6; color++) {
-          if (color_voltages[color] - WIRES_TOLERANCE <= read_value && read_value <= color_voltages[color] + WIRES_TOLERANCE) {
-            detected = (enum wire_color)color;
-            break;
-          }
+    for (uint8_t wire = 0; wire < 6; wire++) {
+      // detect wire color
+      int16_t read_value = analogRead(wire_pins[wire]);
+      enum wire_color detected = INVALID;
+      for (uint8_t color = 0; color <= 6; color++) {
+        if (color_voltages[color] - WIRES_TOLERANCE <= read_value && read_value <= color_voltages[color] + WIRES_TOLERANCE) {
+          detected = (enum wire_color)color;
+          break;
         }
-
-        if (detected != last_detected_wires[wire]) {
-          // when the status changes, reset the counter
-          last_detected_wires[wire] = detected;
-          consecutive_measurements[wire] = 1;
-        } else if (consecutive_measurements[wire] < WIRES_WAIT_MEASUREMENTS) {
-          // when the status stays the same, increment the counter
-          // and send the new states when they stay long enough
-          if (++consecutive_measurements[wire] == WIRES_WAIT_MEASUREMENTS) {
-            sent_wires[wire] = last_detected_wires[wire];
-            changed = true;
-            DEBUG_PRINT("wire ");
-            DEBUG_PRINT(wire);
-            DEBUG_PRINT(" changed to ");
-            DEBUG_PRINTLN(color_names[sent_wires[wire]]);
-          }
-        }
-        wire++;
       }
 
-      pinMode(output_pins[output], INPUT);
+      if (detected != last_detected_wires[wire]) {
+        // when the status changes, reset the counter
+        last_detected_wires[wire] = detected;
+        consecutive_measurements[wire] = 1;
+      } else if (consecutive_measurements[wire] < WIRES_WAIT_MEASUREMENTS) {
+        // when the status stays the same, increment the counter
+        // and send the new states when they stay long enough
+        if (++consecutive_measurements[wire] == WIRES_WAIT_MEASUREMENTS) {
+          sent_wires[wire] = last_detected_wires[wire];
+          changed = true;
+          DEBUG_PRINT("wire ");
+          DEBUG_PRINT(wire);
+          DEBUG_PRINT(" changed to ");
+          DEBUG_PRINTLN(color_names[sent_wires[wire]]);
+        }
+      }
     }
 
     if (changed) {

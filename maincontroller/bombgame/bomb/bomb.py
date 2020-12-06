@@ -192,7 +192,7 @@ class Bomb(EventSource):
                 self.modules_by_bus_id[message.module] = module
                 self.modules_by_location[self._init_location] = module
                 self.modules.append(module)
-                self.trigger(BombModuleAdded(module))
+                self.trigger(BombModuleAdded(self, module))
                 self._init_location = None
                 self._init_cond.notify_all()
                 return
@@ -255,7 +255,7 @@ class Bomb(EventSource):
             await self.explode()
             return
         if prev_second != curr_second:
-            self.trigger(TimerTick())
+            self.trigger(TimerTick(self))
             if self.timer_speed <= 1.0:
                 play_sound(TICK_SOUND_SLOW)
             elif self.timer_speed <= 1.25:

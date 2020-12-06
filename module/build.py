@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from os import chdir, listdir
 from os.path import dirname, abspath, join, basename
 from re import match
-from subprocess import check_call, check_output
+from subprocess import check_call, check_output, CalledProcessError
 from sys import stderr, executable
 
 FIRMWARE_FOLDER = dirname(abspath(__file__))
@@ -46,7 +46,7 @@ def main():
 
     chdir(FIRMWARE_FOLDER)
 
-    print("Checking known module types")
+    print("Checking known module types", file=stderr)
     known_types = []
     with open(join(FIRMWARE_FOLDER, "module.h")) as stream:
         for line in stream.readlines():
@@ -55,7 +55,7 @@ def main():
                 known_types.append(define_match.group(1).lower())
 
     if args.module.lower() not in known_types:
-        print(f"Module {args.module} not found in module.h. Make sure it's correct.")
+        print(f"Module {args.module} not found in module.h. Make sure it's correct.", file=stderr)
         exit(1)
         return
 
@@ -69,9 +69,9 @@ def main():
             version = [int(part) for part in version_str.split(".")]
         except Exception:
             raise OSError("invalid output from arduino-cli version")
-    except OSError as ex:
+    except (OSError, CalledProcessError) as ex:
         print(f"Failed to check arduino-cli version: {ex}", file=stderr)
-        print(f"Make sure arduino-cli is in PATH or use --arduino-cli to specify a location.")
+        print(f"Make sure arduino-cli is in PATH or use --arduino-cli to specify a location.", file=stderr)
         exit(1)
         return
 
@@ -82,8 +82,13 @@ def main():
 
     for file in listdir(FIRMWARE_FOLDER):
         if file.startswith(f"{args.module.lower()}_") and file.endswith(".prebuild.py"):
-            print(f"{basename(executable)} {file}")
-            check_call([executable, file])
+            print(f"{basename(executable)} {file}", file=stderr)
+            try:
+                check_call([executable, file])
+            except CalledProcessError as ex:
+                print("Pre-build command failed.", file=stderr)
+                exit(ex.returncode or 1)
+                return
 
     print("Writing module_config.h", file=stderr)
     with open(join(FIRMWARE_FOLDER, "module_config.h"), "w") as stream:
@@ -116,7 +121,12 @@ def main():
         command.extend(["-u", "-p", args.upload])
 
     print(" ".join(command), file=stderr)
-    check_call(command)
+    try:
+        check_call(command)
+    except CalledProcessError as ex:
+        print("Build failed.")
+        exit(ex.returncode or 1)
+        return
 
 
 if __name__ == "__main__":

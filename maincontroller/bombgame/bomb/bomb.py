@@ -220,6 +220,7 @@ class Bomb(EventSource):
 
     def start_game(self):
         """Starts the game with the initial wait phase."""
+        # TODO: prevent multiple instances from running
         self.create_task(self._start_game_task())
 
     async def _start_game_task(self):

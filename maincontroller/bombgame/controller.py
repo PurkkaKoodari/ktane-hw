@@ -1,17 +1,19 @@
-from asyncio import run, Event
+from asyncio import run, Event, Task, create_task
 from logging import getLogger, INFO, DEBUG, StreamHandler, Formatter, LogRecord
 from signal import signal, SIGINT
 from sys import argv
-from typing import Optional, Tuple
+from typing import Optional
 
 import can
 
 from bombgame.audio import initialize_local_playback
+from bombgame.bomb.bomb import Bomb
 from bombgame.bus.bus import BombBus
 from bombgame.config import BOMB_CASING, CAN_CONFIG
-from bombgame.gpio import Gpio
+from bombgame.events import BombChanged
+from bombgame.gpio import Gpio, AbstractGpio
 from bombgame.modules import load_modules
-from bombgame.utils import FatalError
+from bombgame.utils import FatalError, EventSource, log_errors
 from bombgame.web.server import WebInterface
 
 LOGGER = getLogger("BombGame")
@@ -54,30 +56,65 @@ def handle_sigint():
     return quit_evt
 
 
-async def start_game(can_bus=None, gpio=None) -> Tuple[can.BusABC, Gpio, BombBus, WebInterface]:
-    LOGGER.info("Loading modules")
-    load_modules()
-    if can_bus is None:
-        can_bus = initialize_can()
-    if gpio is None:
-        gpio = Gpio(BOMB_CASING)
-        gpio.start()
-    initialize_local_playback()
-    bus = BombBus(can_bus)
-    bus.add_listener(FatalError, handle_fatal_error)
-    bus.start()
-    web_ui = WebInterface(bus, gpio)
-    await web_ui.start()
-    return can_bus, gpio, bus, web_ui
+class BombGameController(EventSource):
+    can_bus: Optional[can.BusABC]
+    gpio: Optional[AbstractGpio]
+    bus: Optional[BombBus]
+    web_ui: Optional[WebInterface]
+    bomb: Optional[Bomb]
+    _bomb_init_task: Optional[Task]
 
+    def __init__(self, can_bus: Optional[can.BusABC] = None, gpio: Optional[AbstractGpio] = None):
+        super().__init__()
+        self.can_bus = can_bus
+        self.gpio = gpio
+        self.bus = None
+        self.web_ui = None
+        self.bomb = None
+        self._bomb_init_task = None
 
-async def stop_game(can_bus: Optional[can.BusABC], gpio: Optional[Gpio], bus: BombBus, web_ui: WebInterface):
-    await web_ui.stop()
-    bus.stop()
-    if gpio is not None:
-        gpio.stop()
-    if can_bus is not None:
-        can_bus.shutdown()
+    async def _initialize_bomb(self):
+        self.bomb = Bomb(self.bus, self.gpio, BOMB_CASING)
+        self.trigger(BombChanged(self.bomb))
+        self._bomb_init_task = create_task(self.bomb.initialize())
+        await self._bomb_init_task
+        self._bomb_init_task = None
+
+    def _deinitialize_bomb(self):
+        if self._bomb_init_task:
+            self._bomb_init_task.cancel()
+        self._bomb_init_task = None
+        if self.bomb:
+            self.bomb.deinitialize()
+
+    async def start(self):
+        LOGGER.info("Loading modules")
+        load_modules()
+        if self.can_bus is None:
+            self.can_bus = initialize_can()
+        if self.gpio is None:
+            self.gpio = Gpio(BOMB_CASING)
+            self.gpio.start()
+        initialize_local_playback()
+        self.bus = BombBus(self.can_bus)
+        self.bus.add_listener(FatalError, handle_fatal_error)
+        self.bus.start()
+        self.web_ui = WebInterface(self)
+        await self.web_ui.start()
+        create_task(log_errors(self._initialize_bomb()))
+
+    async def stop(self):
+        self._deinitialize_bomb()
+        await self.web_ui.stop()
+        self.bus.stop()
+        if self.gpio is not None:
+            self.gpio.stop()
+        if self.can_bus is not None:
+            self.can_bus.shutdown()
+
+    def reset(self):
+        self._deinitialize_bomb()
+        create_task(log_errors(self._initialize_bomb()))
 
 
 async def main():
@@ -85,9 +122,10 @@ async def main():
     init_logging(verbose)
     LOGGER.info("Starting. Exit cleanly with SIGINT/Ctrl-C")
     quit_evt = handle_sigint()
-    can_bus, gpio, bus, web_ui = await start_game()
+    game = BombGameController()
+    await game.start()
     await quit_evt.wait()
-    await stop_game(can_bus, gpio, bus, web_ui)
+    await game.stop()
     LOGGER.info("Exiting")
 
 if __name__ == "__main__":

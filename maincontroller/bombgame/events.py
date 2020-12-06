@@ -1,9 +1,17 @@
 from enum import IntEnum
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bombgame.bomb.bomb import Bomb
+    from bombgame.bomb.state import BombState
+    from bombgame.modules.base import Module
 
 
 class TimerTick:
     """The event raised when the bomb timer ticks."""
+
+    def __init__(self, bomb: Bomb):
+        self.bomb = bomb
 
     def __repr__(self):
         return f"<TimerTick>"
@@ -12,7 +20,7 @@ class TimerTick:
 class ModuleStriked:
     """The event raised when a strike occurs on a module."""
 
-    def __init__(self, module):
+    def __init__(self, module: Module):
         self.module = module
 
     def __repr__(self):
@@ -22,7 +30,7 @@ class ModuleStriked:
 class BombStateChanged:
     """The event raised when the bomb's state changes."""
 
-    def __init__(self, state):
+    def __init__(self, state: BombState):
         self.state = state
 
     def __repr__(self):
@@ -32,7 +40,8 @@ class BombStateChanged:
 class BombModuleAdded:
     """The event raised when a module is added to a bomb."""
 
-    def __init__(self, module):
+    def __init__(self, bomb: Bomb, module: Module):
+        self.bomb = bomb
         self.module = module
 
     def __repr__(self):
@@ -42,7 +51,7 @@ class BombModuleAdded:
 class ModuleStateChanged:
     """The event raised when a module's state changes in a way that would require an UI update."""
 
-    def __init__(self, module):
+    def __init__(self, module: Module):
         self.module = module
 
     def __repr__(self):
@@ -64,7 +73,7 @@ class BombErrorLevel(IntEnum):
 class BombError:
     """The event raised when an error occurs in the bomb or a module."""
 
-    def __init__(self, module: Optional, level: BombErrorLevel, details: str):
+    def __init__(self, module: Optional[Module], level: BombErrorLevel, details: str):
         self.module = module
         self.level = level
         self.details = details
@@ -77,3 +86,13 @@ class BombError:
     @property
     def location(self):
         return None if self.module is None else self.module.location
+
+
+class BombChanged:
+    """The event raised when the game is reset and a new bomb is created."""
+
+    def __init__(self, bomb: Bomb):
+        self.bomb = bomb
+
+    def __repr__(self):
+        return f"<BombChanged: {self.bomb}>"

@@ -34,6 +34,12 @@ class AbstractGpio(EventSource, ABC):
     def __init__(self):
         EventSource.__init__(self)
 
+    def start(self) -> None:
+        """Starts any tasks needed by the GPIO implementation. The default implementation does nothing."""
+
+    def stop(self) -> None:
+        """Stops any tasks started by ``start()``. The default implementation does nothing."""
+
     @abstractmethod
     async def reset(self) -> None:
         """Resets all module enable and widget pins to off."""

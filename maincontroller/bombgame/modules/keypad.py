@@ -89,7 +89,7 @@ class KeypadModule(Module):
         if isinstance(message, KeypadPressMessage) and self.state in (ModuleState.GAME, ModuleState.DEFUSED):
             if len(self._pressed) < len(self._solution) and message.position == self._solution[len(self._pressed)]:
                 self._pressed.append(message.position)
-                await self._bomb.send(KeypadSetLedsMessage(self.bus_id, positions=self._pressed))
+                await self._bomb.send(KeypadSetLedsMessage(self.bus_id, leds=self._pressed))
                 if len(self._pressed) == len(self._solution):
                     await self.defuse()
             else:
@@ -136,23 +136,23 @@ class KeypadPressMessage(BusMessage):
 class KeypadSetLedsMessage(BusMessage):
     message_id = (KeypadModule, BusMessageId.MODULE_SPECIFIC_1)
 
-    __slots__ = ("positions",)
+    __slots__ = ("leds",)
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 positions: Iterable[KeypadPosition]):
+                 leds: Iterable[KeypadPosition]):
         super().__init__(self.__class__.message_id[1], module, direction)
-        self.positions = set(positions)
+        self.leds = set(leds)
 
     @classmethod
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
         if len(data) != 1:
             raise ValueError(f"{cls.__name__} must have 1 byte of data")
         bitfield, = struct.unpack("<B", data)
-        positions = (pos for pos in KeypadPosition.__members__.values() if bitfield & (1 << pos.value))
-        return cls(module, direction, positions=positions)
+        leds = (pos for pos in KeypadPosition.__members__.values() if bitfield & (1 << pos.value))
+        return cls(module, direction, leds=leds)
 
     def _serialize_data(self):
-        return struct.pack("<B", sum(1 << pos.value for pos in self.positions))
+        return struct.pack("<B", sum(1 << pos.value for pos in self.leds))
 
     def _data_repr(self):
-        return ", ".join(pos.name for pos in self.positions) or "none"
+        return ", ".join(pos.name for pos in self.leds) or "none"

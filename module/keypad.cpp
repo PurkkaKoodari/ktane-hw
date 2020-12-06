@@ -11,7 +11,7 @@ struct keypad_press_data {
   uint8_t position;
 };
 struct keypad_leds_data {
-  uint8_t positions;
+  uint8_t leds;
 };
 
 bool pressed[4] = { 0, 0, 0, 0 };
@@ -34,9 +34,9 @@ void moduleReset() {
 bool moduleHandleMessage(uint16_t messageId) {
   switch (messageId) {
   case MESSAGE_MODULE_SPECIFIC_1:
-    uint8_t color = (uint8_t) ((struct keypad_leds_data *) &canFrame.data)->positions;
+    uint8_t leds = (uint8_t) ((struct keypad_leds_data *) &canFrame.data)->leds;
     for (uint8_t i = 0; i < 4; i++) {
-      digitalWrite(led_pins[i], !((color >> i) & 1));
+      digitalWrite(led_pins[i], !((leds >> i) & 1));
     }
     return true;
   default:

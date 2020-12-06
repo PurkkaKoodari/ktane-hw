@@ -16,11 +16,11 @@
 #define VERSION_SW_MINOR 0
 
 #if MODULE_TYPE == MODULE_TYPE_COMPLICATED_WIRES
-#define WIRE_PINS A0, A1, A4, A5, A6, A7
+#define WIRE_PINS A7, A6, A5, A4, A1, A0
 #define LED_ROW_PINS 4, 7
 #define LED_COLUMN_PINS 6, 5, 3
 #else
-#define WIRE_PINS A7, A6, A5, A4, A1, A0
+#define WIRE_PINS A0, A1, A4, A5, A6, A7
 #endif
 
 #define STRIKE_LED_PIN 9

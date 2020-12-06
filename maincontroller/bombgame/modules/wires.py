@@ -22,9 +22,11 @@ class WireColor(IntEnum):
     YELLOW = 2
     BLACK = 3
     WHITE = 4
-    DISCONNECTED = 5
-    SHORT = 6
-    INVALID = 7
+    RED_BLUE = 5
+    DISCONNECTED = 6
+    SHORT = 7
+    INVALID = 78
+
 
 
 REAL_COLORS = (WireColor.RED, WireColor.BLUE, WireColor.YELLOW, WireColor.BLACK, WireColor.WHITE)

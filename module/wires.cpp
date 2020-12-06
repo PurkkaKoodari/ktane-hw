@@ -6,8 +6,8 @@
 #define WIRES_TOLERANCE 31 // 0.15V
 
 enum wire_color : uint8_t {
-  RED = 0, BLUE = 1, YELLOW = 2, BLACK = 3, WHITE = 4,
-  DISCONNECTED = 5, SHORT = 6, INVALID = 7
+  RED = 0, BLUE = 1, YELLOW = 2, BLACK = 3, WHITE = 4, RED_BLUE = 5,
+  DISCONNECTED = 6, SHORT = 7, INVALID = 8
 };
 
 enum wire_color last_detected_wires[6] = { DISCONNECTED, DISCONNECTED, DISCONNECTED, DISCONNECTED, DISCONNECTED, DISCONNECTED };
@@ -15,12 +15,13 @@ uint8_t consecutive_measurements[6] = { 0, 0, 0, 0, 0, 0 };
 enum wire_color sent_wires[6] = { DISCONNECTED, DISCONNECTED, DISCONNECTED, DISCONNECTED, DISCONNECTED, DISCONNECTED };
 
 const uint8_t wire_pins[6] = { WIRE_PINS };
-const int16_t color_voltages[7] = {
+const int16_t color_voltages[8] = {
   409, // red: 2V
   614, // blue: 3V
   205, // yellow: 1V
   819, // black: 4V
-  921, // white: 4.5V
+  717, // white: 3.5V
+  921, // red+blue: 4.5V
   1024, // disconnected: 5V
   0 // short circuit: 0V
 };
@@ -63,6 +64,13 @@ void moduleInitHardware() {
 #endif
 }
 
+void moduleReset() {
+  // reset consecutive measurements to ensure we re-send the wire values
+  for (uint8_t i = 0; i < 6; i++) {
+    consecutive_measurements[i] = 0;
+  }
+}
+
 bool moduleHandleMessage(uint16_t messageId) {
 #if MODULE_TYPE == MODULE_TYPE_COMPLICATED_WIRES
   switch (messageId) {
@@ -97,7 +105,7 @@ void moduleLoop() {
       // detect wire color
       int16_t read_value = analogRead(wire_pins[wire]);
       enum wire_color detected = INVALID;
-      for (uint8_t color = 0; color <= 6; color++) {
+      for (uint8_t color = 0; color < INVALID; color++) {
         if (color_voltages[color] - WIRES_TOLERANCE <= read_value && read_value <= color_voltages[color] + WIRES_TOLERANCE) {
           detected = (enum wire_color)color;
           break;

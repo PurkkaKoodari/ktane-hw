@@ -187,6 +187,9 @@ class Bomb(EventSource):
                 if self._init_location is None:
                     self._init_fail(f"An unrequested announce was received from {message.module}.")
                     return
+                if message.module.type not in MODULE_ID_REGISTRY:
+                    self._init_fail(f"The module type of {message.module} is not known.")
+                    return
                 module_class = MODULE_ID_REGISTRY[message.module.type]
                 module = module_class(self, message.module, self._init_location, message.hw_version, message.sw_version)
                 if message.init_complete:

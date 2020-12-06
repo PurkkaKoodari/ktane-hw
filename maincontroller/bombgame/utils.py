@@ -198,5 +198,5 @@ async def log_errors(awaitable: Awaitable):
 
 def handle_sigint():
     quit_evt = Event()
-    signal(SIGINT, lambda _1, _2: quit_evt.set())
+    get_running_loop().add_signal_handler(SIGINT, lambda: quit_evt.set())
     return quit_evt

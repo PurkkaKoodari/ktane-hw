@@ -1,3 +1,5 @@
+from os.path import dirname, abspath, join
+
 font = {
 0x00:"""
 
@@ -982,12 +984,16 @@ for char, glyph in font.items():
     # add to map
     fontmap[pos] = cols
 
-print('#include "module.h"')
-print("#if MODULE_TYPE == MODULE_TYPE_PASSWORD")
-print('#include "password_font.h"')
-print("")
-print("const uint8_t font[256][5] PROGMEM = {")
-for glyph in fontmap:
-    print("    {" + ", ".join(hex(col) for col in glyph) + "},")
-print("};")
-print("#endif")
+firmware_folder = dirname(abspath(__file__))
+output_file = join(firmware_folder, "password_font.gen.cpp")
+
+with open(output_file, "w") as stream:
+    stream.write('#include "module.h"\n')
+    stream.write("#if MODULE_TYPE == MODULE_TYPE_PASSWORD\n")
+    stream.write('#include "password_font.h"\n')
+    stream.write("\n")
+    stream.write("const uint8_t font[256][5] PROGMEM = {\n")
+    for glyph in fontmap:
+        stream.write("    {" + ", ".join(hex(col) for col in glyph) + "},\n")
+    stream.write("};\n")
+    stream.write("#endif\n")

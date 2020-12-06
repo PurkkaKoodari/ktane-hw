@@ -7,3 +7,4 @@ build/
 # generated files
 *.gen.h
 *.gen.cpp
+module_config.h

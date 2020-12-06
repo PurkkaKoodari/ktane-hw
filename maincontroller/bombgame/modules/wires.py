@@ -22,6 +22,12 @@ class WireColor(IntEnum):
     YELLOW = 2
     BLACK = 3
     WHITE = 4
+    DISCONNECTED = 5
+    SHORT = 6
+    INVALID = 7
+
+
+REAL_COLORS = (WireColor.RED, WireColor.BLUE, WireColor.YELLOW, WireColor.BLACK, WireColor.WHITE)
 
 
 def _nth(n, rule):
@@ -75,27 +81,27 @@ RULES = {
 class WiresModule(Module):
     module_id = 2
 
-    __slots__ = ("_wires", "_slots", "_cut", "_solution")
+    __slots__ = ("_initial_connected", "_cut", "_connected", "_solution")
 
     def __init__(self, bomb, bus_id, location, hw_version, sw_version):
         super().__init__(bomb, bus_id, location, hw_version, sw_version)
-        self._wires = None
-        self._slots = [None] * 6
+        self._initial_connected = None
         self._cut = [False] * 6
-        self._connected = [False] * 6
+        self._initial_connected = [WireColor.DISCONNECTED] * 6
+        self._connected = [WireColor.DISCONNECTED] * 6
         self._solution = None
         bomb.add_listener(BombStateChanged, self._handle_bomb_state)
 
     def generate(self):
         last_odd = self._bomb.edgework.serial_number.last_is(ODD)
         count = randint(3, 6)
-        self._wires = [choice(list(WireColor.__members__.values())) for _ in range(count)]
+        colors = [choice(REAL_COLORS) for _ in range(count)]
         indices = sample(range(6), count)
-        for index, color in zip(indices, self._wires):
-            self._slots[index] = color
+        for index, color in zip(indices, colors):
+            self._initial_connected[index] = color
         for condition, rule in RULES[count]:
-            if condition(self._wires, last_odd):
-                self._solution = rule(self._slots)
+            if condition(colors, last_odd):
+                self._solution = rule(self._initial_connected)
                 break
         else:
             raise AssertionError("failed to generate solution")
@@ -104,27 +110,34 @@ class WiresModule(Module):
         pass
 
     def ui_state(self):
+        if self._solution is None:
+            return {}
         return {
-            "wires": ["EMPTY" if wire is None else wire.name for wire in self._slots],
-            "connected": self._connected,
-            "solutions": self._solution
+            "wires": [wire.name for wire in self._initial_connected],
+            "connected": [wire.name for wire in self._connected],
+            "cut": self._cut,
+            "solution": self._solution,
         }
 
     def _handle_bomb_state(self, event: BombStateChanged):
         if event.state == BombState.GAME_STARTING:
-            bad_pos = [str(pos) for pos in range(6) if self._slots[pos] is not None and not self._connected[pos]]
+            bad_pos = [str(pos) for pos in range(6) if self._initial_connected[pos] != self._connected[pos]]
             if bad_pos:
                 self._bomb.trigger(BombError(self, BombErrorLevel.MAJOR,
-                                             f"The wires in positions {', '.join(bad_pos)} are not connected, "
-                                             f"making the module unsolvable."))
+                                             f"The wires in positions {', '.join(bad_pos)} do not match the initial "
+                                             f"state, potentially making the module unsolvable."))
 
     async def handle_message(self, message: BusMessage):
-        if isinstance(message, WiresSetPositionsMessage):
-            was_connected = self._connected
-            self._connected = [pos in message.positions for pos in range(6)]
+        if isinstance(message, WiresUpdateMessage):
+            prev_connected = self._connected
+            self._connected = list(message.wires)
             if self.state in (ModuleState.GAME, ModuleState.DEFUSED):
                 for pos in range(6):
-                    if self._slots[pos] is not None and not self._cut[pos] and was_connected[pos] and not self._connected[pos]:
+                    # a wire is disconnected when it:
+                    if (not self._cut[pos]  # hasn't been cut yet
+                            and self._initial_connected[pos] != WireColor.DISCONNECTED  # is supposed to exist
+                            and prev_connected[pos] != WireColor.DISCONNECTED  # did exist a moment ago
+                            and self._connected[pos] == WireColor.DISCONNECTED):  # no longer exists
                         self._cut[pos] = True
                         if pos == self._solution:
                             LOGGER.info("Wire %s cut correctly", pos + 1)
@@ -139,30 +152,27 @@ class WiresModule(Module):
 
 
 @MODULE_MESSAGE_ID_REGISTRY.register
-class WiresSetPositionsMessage(BusMessage):
+class WiresUpdateMessage(BusMessage):
     message_id = (WiresModule, BusMessageId.MODULE_SPECIFIC_0)
 
-    positions: Sequence[int]
+    wires: Sequence[WireColor]
 
     def __init__(self, module: ModuleId, direction: BusMessageDirection = BusMessageDirection.OUT, *,
-                 positions: Sequence[int]):
+                 wires: Sequence[WireColor]):
         super().__init__(self.__class__.message_id[1], module, direction)
-        if len(positions) != len(set(positions)):
-            raise ValueError("positions must be unique")
-        if not all(0 <= position < 6 for position in positions):
-            raise ValueError("positions must be between 0 and 5")
-        self.positions = tuple(positions)
+        if len(wires) != 6:
+            raise ValueError("must have 6 wires")
+        self.wires = tuple(wires)
 
     @classmethod
     def _parse_data(cls, module: ModuleId, direction: BusMessageDirection, data: bytes):
-        if len(data) != 1:
-            raise ValueError(f"{cls.__name__} must have 1 byte of data")
-        bitfield, = struct.unpack("<B", data)
-        positions = [i for i in range(6) if bitfield & (1 << i)]
-        return cls(module, direction, positions=positions)
+        if len(data) != 6:
+            raise ValueError(f"{cls.__name__} must have 6 bytes of data")
+        wires = [WireColor(wire) for wire in struct.unpack("<6B", data)]
+        return cls(module, direction, wires=wires)
 
     def _serialize_data(self):
-        return struct.pack("<B", sum(1 << position for position in self.positions))
+        return struct.pack("<6B", self.wires)
 
     def _data_repr(self):
-        return "connected: " + " ".join(str(position + 1) for position in sorted(self.positions))
+        return " ".join(wire.name for wire in self.wires)

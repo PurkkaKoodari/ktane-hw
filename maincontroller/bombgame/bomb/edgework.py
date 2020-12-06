@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from enum import Enum
 from random import choice, randrange
 from typing import Optional, Tuple, List
@@ -10,10 +11,22 @@ class BatteryType(Enum):
     D = "D"
 
 
-class BatteryHolder:
+class Widget(ABC):
+    @abstractmethod
+    def serialize(self) -> dict:
+        """Serializes the widget to JSON."""
+
+
+class BatteryHolder(Widget):
     def __init__(self, type_: BatteryType):
         self.type = type_
         self.batteries = 2 if type_ == "AA" else 1
+
+    def serialize(self):
+        return {
+            "type": "battery",
+            "battery_type": self.type.name,
+        }
 
 
 class PortType(Enum):
@@ -25,9 +38,15 @@ class PortType(Enum):
     PS2 = "ps2"
 
 
-class PortPlate:
+class PortPlate(Widget):
     def __init__(self, ports: Tuple[PortType, ...]):
         self.ports = ports
+
+    def serialize(self):
+        return {
+            "type": "port_plate",
+            "ports": [port.name for port in self.ports],
+        }
 
 
 class IndicatorName(Enum):
@@ -44,7 +63,7 @@ class IndicatorName(Enum):
     FRK = "FRK"
 
 
-class Indicator:
+class Indicator(Widget):
     def __init__(self, name: IndicatorName, state: Optional[bool]):
         self.name = name
         self.state = state
@@ -64,10 +83,17 @@ class Indicator:
     def __bool__(self):
         return self.present
 
+    def serialize(self):
+        return {
+            "type": "port_plate",
+            "name": self.name.name,
+            "lit": self.lit,
+        }
+
 
 class Edgework:
     serial_number: BombSerial
-    widgets: list
+    widgets: List[Widget]
 
     def __init__(self):
         # TODO: widget/edgework configuration from web ui
@@ -119,3 +145,6 @@ class Edgework:
     @property
     def port_plates(self) -> List[PortPlate]:
         return [widget for widget in self.widgets if isinstance(widget, PortPlate)]
+
+    def serialize(self) -> Tuple[str, list]:
+        return self.serial_number, [widget.serialize() for widget in self.widgets]

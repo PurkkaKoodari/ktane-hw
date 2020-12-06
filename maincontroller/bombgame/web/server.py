@@ -106,11 +106,12 @@ class UnpauseGameMessage(WebInterfaceMessage):
 @MESSAGE_TYPE_REGISTRY.register
 class BombInfoMessage(WebInterfaceMessage):
     message_type = "bomb"
-    fields = {"serial_number": str}
+    fields = {"serial_number": str, "widgets": list}
 
-    def __init__(self, serial_number: str):
+    def __init__(self, serial_number: str, widgets: list):
         super().__init__()
         self.serial_number = serial_number
+        self.widgets = widgets
 
 
 @MESSAGE_TYPE_REGISTRY.register
@@ -189,6 +190,7 @@ class WebInterface(EventSource, SingleClientWebSocketServer):
         EventSource.__init__(self)
         SingleClientWebSocketServer.__init__(self)
         self._controller = controller
+        controller.add_listener(BombChanged, self._bomb_changed)
 
     async def _send(self, message: WebInterfaceMessage, client: Optional[WebSocketServerProtocol] = None):
         await self._send_to_client(message.serialize(), client)
@@ -212,14 +214,14 @@ class WebInterface(EventSource, SingleClientWebSocketServer):
 
         # TODO send current state
         await self._send(ConfigMessage({}), client)
-        await self._send(BombInfoMessage(self._controller.bomb.edgework.serial_number), client)
+        await self._send(BombInfoMessage(*self._controller.bomb.edgework.serialize()), client)
         for module in self._controller.bomb.modules:
             await self._send_module(module, client)
         await self._send(StateMessage(self._controller.bomb._state.name), client)
 
     async def _bomb_changed(self, event: BombChanged):
         await self._send(ResetMessage())
-        await self._send(BombInfoMessage(event.bomb.edgework.serial_number))
+        await self._send(BombInfoMessage(*event.bomb.edgework.serialize()))
         event.bomb.add_listener(BombModuleAdded, self._handle_module_add)
         event.bomb.add_listener(BombStateChanged, self._handle_bomb_state)
         event.bomb.add_listener(ModuleStateChanged, self._handle_module_update)

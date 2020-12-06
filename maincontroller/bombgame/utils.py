@@ -17,11 +17,11 @@ class EventSource:
         self.__listeners = []
         self.__loop = get_running_loop()
 
-    def add_listener(self, eventclass: type, callback: Callable, reentrant: bool = False) -> None:
+    def add_listener(self, eventclass: type, callback: Callable[[Any], Any], reentrant: bool = False) -> None:
         lock = None if reentrant else AsyncLock()
         self.__listeners.append((eventclass, callback, lock))
 
-    def remove_listener(self, eventclass: type, callback: Callable) -> None:
+    def remove_listener(self, eventclass: type, callback: Callable[[Any], Any]) -> None:
         try:
             for listener in self.__listeners:
                 if listener[0] == eventclass and listener[1] == callback:

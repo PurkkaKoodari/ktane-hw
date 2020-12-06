@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from asyncio import get_running_loop, iscoroutinefunction, Lock as AsyncLock, run_coroutine_threadsafe, CancelledError
+from asyncio.locks import Event
 from collections import deque
 from concurrent.futures import Executor, Future
 from logging import getLogger
+from signal import signal, SIGINT
 from threading import Thread, RLock, Condition
 from typing import Any, Union, Callable, NamedTuple, Awaitable, Dict, TypeVar, Deque, Tuple, Sequence, Mapping
 
@@ -192,3 +194,9 @@ async def log_errors(awaitable: Awaitable):
             "exception": ex
         })
         raise
+
+
+def handle_sigint():
+    quit_evt = Event()
+    signal(SIGINT, lambda _1, _2: quit_evt.set())
+    return quit_evt

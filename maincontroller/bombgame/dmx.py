@@ -1,19 +1,30 @@
 from abc import ABC, abstractmethod
-from asyncio import create_task, get_event_loop, Future, Event, wait, Task
+from asyncio import create_task, get_event_loop, Future, Event, Task
 from logging import getLogger
 from typing import Optional, Dict, Sequence, TYPE_CHECKING
 
-from websockets import connect, WebSocketClientProtocol
+from websockets import connect, WebSocketClientProtocol, ConnectionClosed
 
 from bombgame.bomb.state import BombState
-from bombgame.config import DMX_SERVER
+from bombgame.config import DMX_SERVER, ROOM_SERVER, ROOM_DMX_ENABLED
 from bombgame.events import BombStateChanged, TimerTick, BombChanged
 from bombgame.utils import log_errors
+from bombgame.websocket import InvalidMessage
 
 if TYPE_CHECKING:
     from bombgame.controller import BombGameController
+    from bombgame.roomserver import RoomServerClient, RoomServerChannel, RoomServer
 
 LOGGER = getLogger("DMX")
+
+SCENE_BEFORE_START = "Before Start"
+SCENE_NORMAL = "Normal"
+SCENE_EMERGENCY = "Emergency"
+SCENE_EXPLOSION = "Explosion"
+SCENE_VICTORY = "Success"
+ALL_SCENES = (SCENE_BEFORE_START, SCENE_NORMAL, SCENE_EMERGENCY, SCENE_EXPLOSION, SCENE_VICTORY)
+
+EMERGENCY_SECONDS = 60
 
 
 class DMXBackend(ABC):
@@ -27,26 +38,41 @@ class DMXBackend(ABC):
     def change_scene(self, scene: str):
         """Changes the scene to the given one."""
 
+    def add_room_server_handler(self, room_server: RoomServer):
+        room_server.add_handler(RoomServerChannel.DMX, self._handle_dmx_message)
+
+    def _handle_dmx_message(self, data: dict):
+        scene = data.get("scene")
+        if not isinstance(scene, str):
+            raise InvalidMessage("invalid scene")
+        if scene not in ALL_SCENES:
+            raise InvalidMessage(f"unknown scene {scene}")
+        self.change_scene(scene)
+
 
 class QLCPlusApi:
+    _url: str
     _pending_requests: Dict[str, Future[Sequence[str]]]
     _connection: Optional[WebSocketClientProtocol]
+    _close_requested: bool
 
     def __init__(self, url: str):
         self._url = url
         self._pending_requests = {}
         self._connection = None
-        self._closing = False
+        self._close_requested = False
 
     async def start(self):
-        if self._closing or self._connection is not None:
+        if self._close_requested or self._connection is not None:
             raise RuntimeError("already started or stopped")
+        LOGGER.info("Connecting to QLC+ API")
         self._connection = await connect(self._url)
         create_task(log_errors(self._client_receiver()))
 
     async def stop(self):
-        self._closing = True
+        self._close_requested = True
         if self._connection is not None:
+            LOGGER.info("Closing QLC+ API connection")
             await self._connection.close()
             self._connection = None
 
@@ -69,6 +95,9 @@ class QLCPlusApi:
                     continue
                 LOGGER.debug("Response from QLC+ to %s", action)
                 self._pending_requests[action].set_result(results)
+        except ConnectionClosed as ex:
+            if not self._close_requested:
+                LOGGER.error("QLC+ API connection closed unexpectedly (code %s)", ex.code)
         finally:
             self._connection = None
 
@@ -130,15 +159,9 @@ class QLCPlusDMXBackend(DMXBackend):
             if next_scene == current_scene:
                 continue
 
-            futures = []
             if current_scene is not None:
-                futures.append(self._api.call("setFunctionStatus", scene_ids[current_scene], "0"))
-            futures.append(self._api.call("setFunctionStatus", scene_ids[next_scene], "1"))
-
-            # wait for both calls and ensure we raise any errors
-            done, _ = await wait(futures)
-            for future in done:
-                future.result()
+                await self._api.call("setFunctionStatus", scene_ids[current_scene], "0")
+            await self._api.call("setFunctionStatus", scene_ids[next_scene], "1")
 
             current_scene = next_scene
 
@@ -147,27 +170,27 @@ class QLCPlusDMXBackend(DMXBackend):
         self._change_event.set()
 
 
-SCENE_BEFORE_START = "Before Start"
-SCENE_NORMAL = "Normal"
-SCENE_EMERGENCY = "Emergency"
-SCENE_EXPLOSION = "Explosion"
-SCENE_VICTORY = "Success"
-ALL_SCENES = (SCENE_BEFORE_START, SCENE_NORMAL, SCENE_EMERGENCY, SCENE_EXPLOSION, SCENE_VICTORY)
+class RoomServerDMXBackend(DMXBackend):
+    def __init__(self, room_server: RoomServerClient):
+        self._room_server = room_server
 
-EMERGENCY_SECONDS = 60
+    def change_scene(self, scene: str):
+        self._room_server.send_async(RoomServerChannel.DMX, {"scene": scene})
 
 
 class DMXController:
     _backend: DMXBackend
 
-    def __init__(self, controller: BombGameController):
-        self._backend = QLCPlusDMXBackend()
+    def __init__(self, controller: BombGameController, backend: DMXBackend):
+        self._backend = backend
         controller.add_listener(BombChanged, self._bomb_changed)
 
     async def start(self):
+        LOGGER.info("Starting DMX controller")
         await self._backend.start()
 
     async def stop(self):
+        LOGGER.info("Stopping DMX controller")
         await self._backend.stop()
 
     def _bomb_changed(self, event: BombChanged):
@@ -190,3 +213,23 @@ class DMXController:
     def _timer_tick(self, event: TimerTick):
         if event.bomb._state == BombState.GAME_STARTED and event.bomb.time_left < EMERGENCY_SECONDS:
             self._backend.change_scene(SCENE_EMERGENCY)
+
+
+async def initialize_local_dmx_backend() -> Optional[DMXBackend]:
+    if DMX_SERVER is not None:
+        return QLCPlusDMXBackend()
+    else:
+        return None
+
+
+async def initialize_bomb_dmx(controller: BombGameController) -> Optional[DMXController]:
+    """Chooses a DMX backend based on configuration and starts the controller based on it."""
+    if ROOM_SERVER is not None and ROOM_DMX_ENABLED:
+        backend = RoomServerDMXBackend(controller.room_server)
+    else:
+        backend = initialize_local_dmx_backend()
+    if backend is None:
+        return None
+    controller = DMXController(controller, backend)
+    await controller.start()
+    return controller

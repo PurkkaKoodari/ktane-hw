@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 import json
-from asyncio import wait_for, Task, TimeoutError as AsyncTimeoutError
+from asyncio import wait_for, TimeoutError as AsyncTimeoutError
 from logging import getLogger
-from typing import Optional, Any, Mapping, ClassVar, TYPE_CHECKING
+from typing import Optional, Any, Mapping, ClassVar, TYPE_CHECKING, Union
 
-from websockets import serve, WebSocketServerProtocol, ConnectionClosed, WebSocketServer
+from websockets import WebSocketServerProtocol
 
 from bombgame.bomb.state import BombState
-from bombgame.config import WEB_WS_PORT, WEB_UI_VERSION, WEB_PASSWORD, WEB_LOGIN_TIMEOUT
+from bombgame.config import WEB_WS_PORT, WEB_PASSWORD, WEB_LOGIN_TIMEOUT
 from bombgame.events import BombError, BombModuleAdded, BombStateChanged, ModuleStateChanged, BombChanged
 from bombgame.modules.base import Module
 from bombgame.utils import EventSource, Registry, Ungettable
+from bombgame.websocket import (SingleClientWebSocketServer, InvalidMessage, close_client_invalid_message)
 
 if TYPE_CHECKING:
     from bombgame.controller import BombGameController
@@ -20,11 +21,8 @@ MESSAGE_TYPE_REGISTRY = Registry("message_type")
 
 LOGGER = getLogger("WebUI")
 
-
-class InvalidMessage(Exception):
-    def __init__(self, reason: str):
-        super().__init__(reason)
-        self.reason = reason
+# compared against the string sent by the client to identify outdated (cached) UI JS
+WEB_UI_VERSION = "0.1-a1"
 
 
 class WebInterfaceMessage:
@@ -175,77 +173,49 @@ class ErrorMessage(WebInterfaceMessage):
         self.message = message
 
 
-async def _invalid_message(client: WebSocketServerProtocol, reason: str = "invalid message", code: int = 1003):
-    await client.close(code, reason)
-    raise ConnectionClosed(code, reason) from None
-
-
-async def _receive(client: WebSocketServerProtocol):
+def _parse_message_from_client(client: WebSocketServerProtocol, data: Union[str, bytes]):
     try:
-        data = await client.recv()
         if not isinstance(data, str):
             raise InvalidMessage("only text messages are valid")
         return WebInterfaceMessage.parse(data)
     except InvalidMessage as error:
-        await _invalid_message(client, error.reason)
+        await close_client_invalid_message(client, error.reason)
 
 
-class WebInterface(EventSource):
-    _serve_task: Optional[Task]
-    _server: Optional[WebSocketServer]
-    _client: Optional[WebSocketServerProtocol]
+class WebInterface(EventSource, SingleClientWebSocketServer):
+    _controller: BombGameController
 
     def __init__(self, controller: BombGameController):
-        super().__init__()
+        EventSource.__init__(self)
+        SingleClientWebSocketServer.__init__(self)
         self._controller = controller
-        self._serve_task = None
-        self._server = None
-        self._client = None
 
     async def _send_to_client(self, message: WebInterfaceMessage, client: Optional[WebSocketServerProtocol] = None):
-        if client is None:
-            client = self._client
-        if client is not None:
-            try:
-                await client.send(message.serialize())
-            except ConnectionClosed:
-                pass
+        await super()._send_to_client(message.serialize(), client)
 
-    async def _handle_client(self, client: WebSocketServerProtocol, _: str):
-        LOGGER.info("Client connected from %s", client.remote_address)
+    async def _new_client_connected(self, client: WebSocketServerProtocol):
         try:
-            try:
-                handshake = await wait_for(_receive(client), WEB_LOGIN_TIMEOUT)
-            except AsyncTimeoutError:
-                handshake = None
-            if not isinstance(handshake, LoginMessage):
-                await _invalid_message(client, "must send login message upon connecting")
-            if handshake.ui_version != WEB_UI_VERSION:
-                await _invalid_message(client, "web ui version mismatch", 4001)
-            if WEB_PASSWORD is not None:
-                if handshake.password is None:
-                    await _invalid_message(client, "password is required", 4003)
-                if handshake.password != WEB_PASSWORD:
-                    await _invalid_message(client, "password is incorrect", 4003)
-            # TODO send current state
-            await self._send_to_client(ConfigMessage({}), client)
-            await self._send_to_client(BombInfoMessage(self._controller.bomb.edgework.serial_number), client)
-            for module in self._controller.bomb.modules:
-                await self._send_module(module, client)
-            await self._send_to_client(StateMessage(self._controller.bomb._state.name), client)
-        except ConnectionClosed:
-            return
-        old_client = self._client
-        self._client = client
-        if old_client:
-            await old_client.close(4000)
-        try:
-            while True:
-                await self._handle_message(client, await _receive(client))
-        except ConnectionClosed:
-            if client is self._client:
-                self._client = None
-            return
+            data = await wait_for(client.recv(), WEB_LOGIN_TIMEOUT)
+            handshake = _parse_message_from_client(client, data)
+        except AsyncTimeoutError:
+            handshake = None
+
+        if not isinstance(handshake, LoginMessage):
+            await close_client_invalid_message(client, "must send login message upon connecting")
+        if handshake.ui_version != WEB_UI_VERSION:
+            await close_client_invalid_message(client, "web ui version mismatch", 4001)
+        if WEB_PASSWORD is not None:
+            if handshake.password is None:
+                await close_client_invalid_message(client, "password is required", 4003)
+            if handshake.password != WEB_PASSWORD:
+                await close_client_invalid_message(client, "password is incorrect", 4003)
+
+        # TODO send current state
+        await self._send_to_client(ConfigMessage({}), client)
+        await self._send_to_client(BombInfoMessage(self._controller.bomb.edgework.serial_number), client)
+        for module in self._controller.bomb.modules:
+            await self._send_module(module, client)
+        await self._send_to_client(StateMessage(self._controller.bomb._state.name), client)
 
     async def _bomb_changed(self, event: BombChanged):
         await self._send_to_client(ResetMessage())
@@ -255,17 +225,18 @@ class WebInterface(EventSource):
         event.bomb.add_listener(ModuleStateChanged, self._handle_module_update)
         event.bomb.add_listener(BombError, self._log_bomb_error)
 
-    async def _handle_message(self, client: WebSocketServerProtocol, message: WebInterfaceMessage):
+    async def _handle_message(self, client: WebSocketServerProtocol, data: Union[str, bytes]):
+        message = _parse_message_from_client(client, data)
         if isinstance(message, ResetMessage):
             self._controller.reset()
         elif isinstance(message, ConfigMessage):
             # TODO
-            await _invalid_message(client, "config not implemented")
+            await close_client_invalid_message(client, "config not implemented")
         elif isinstance(message, StartGameMessage):
             if self._controller.bomb._state == BombState.INITIALIZED:
                 self._controller.bomb.start_game()
         else:
-            await _invalid_message(client, "invalid message type")
+            await close_client_invalid_message(client, "invalid message type")
 
     async def _send_module(self, module: Module, client: Optional[WebSocketServerProtocol] = None):
         await self._send_to_client(AddModuleMessage(
@@ -295,14 +266,15 @@ class WebInterface(EventSource):
         ))
 
     async def start(self):
-        if self._serve_task is not None:
-            raise RuntimeError("web interface already running")
         LOGGER.info("Starting Web UI")
-        self._server = await serve(self._handle_client, port=WEB_WS_PORT)
+        await self.start_server(WEB_WS_PORT)
 
     async def stop(self):
-        if self._server is None:
-            raise RuntimeError("web interface is not running")
         LOGGER.info("Stopping Web UI")
-        self._server.close()
-        await self._server.wait_closed()
+        await self.stop_server()
+
+
+async def initialize_web_ui(controller: BombGameController) -> WebInterface:
+    web_ui = WebInterface(controller)
+    await web_ui.start()
+    return web_ui

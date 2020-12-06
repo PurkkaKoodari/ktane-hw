@@ -4,7 +4,7 @@ from logging import getLogger
 from time import monotonic
 from typing import List, Dict, Optional, Coroutine
 
-from bombgame.audio import load_sounds, register_sound, AudioLocation, stop_all_sounds, play_sound
+from bombgame.audio import register_sound, AudioLocation, BombSoundSystem
 from bombgame.bomb.edgework import Edgework
 from bombgame.bomb.state import BombState
 from bombgame.bus.bus import BombBus
@@ -29,6 +29,7 @@ class Bomb(EventSource):
     """
 
     _bus: BombBus
+    sound_system: BombSoundSystem
     casing: Casing
     modules: List[Module]
     modules_by_bus_id: Dict[ModuleId, Module]
@@ -45,10 +46,11 @@ class Bomb(EventSource):
     _gpio: AbstractGpio
     _running_tasks: List[Task]
 
-    def __init__(self, bus: BombBus, gpio: AbstractGpio, casing: Casing):
+    def __init__(self, bus: BombBus, gpio: AbstractGpio, sound_system: BombSoundSystem, casing: Casing):
         super().__init__()
         self._bus = bus
         self._gpio = gpio
+        self.sound_system = sound_system
         self.casing = casing
         self.modules = []
         self.modules_by_bus_id = {}
@@ -71,7 +73,7 @@ class Bomb(EventSource):
     async def initialize(self):
         if self._state != BombState.UNINITIALIZED:
             raise RuntimeError("Bomb already initialized")
-        stop_all_sounds()
+        self.sound_system.stop_all_sounds()
         await self._state_lock.acquire()
         LOGGER.debug("Resetting all modules")
         self._state = BombState.RESETTING
@@ -112,7 +114,7 @@ class Bomb(EventSource):
         self.create_task(self._ping_loop())
         # load sounds for the modules
         # TODO do this in an auxiliary thread (but that will require us to move all audio stuff in said thread)
-        load_sounds({Bomb} | set(type(module) for module in self.modules))
+        self.sound_system.load_sounds({Bomb} | set(type(module) for module in self.modules))
         # wait for all modules to initialize
         if not all(module.state == ModuleState.CONFIGURATION for module in self.modules):
             LOGGER.debug("All modules recognized, waiting for initialization")
@@ -257,19 +259,19 @@ class Bomb(EventSource):
         if prev_second != curr_second:
             self.trigger(TimerTick(self))
             if self.timer_speed <= 1.0:
-                play_sound(TICK_SOUND_SLOW)
+                self.sound_system.play_sound(TICK_SOUND_SLOW)
             elif self.timer_speed <= 1.25:
-                play_sound(TICK_SOUND_MEDIUM)
+                self.sound_system.play_sound(TICK_SOUND_MEDIUM)
             else:
-                play_sound(TICK_SOUND_FAST)
+                self.sound_system.play_sound(TICK_SOUND_FAST)
 
     async def explode(self):
         """Ends the game by exploding the bomb."""
         self._state = BombState.EXPLODED
         self.trigger(BombStateChanged(BombState.EXPLODED))
         await self.send(ExplodeBombMessage(ModuleId.BROADCAST))
-        stop_all_sounds()
-        play_sound(EXPLOSION_SOUND)
+        self.sound_system.stop_all_sounds()
+        self.sound_system.play_sound(EXPLOSION_SOUND)
 
     async def _handle_module_state_change(self, _: ModuleStateChanged):
         async with self._state_lock:
@@ -296,7 +298,7 @@ class Bomb(EventSource):
             await self._update_time()
             self.timer_speed += 0.25
         self.trigger(ModuleStriked(module))
-        play_sound(STRIKE_SOUND)
+        self.sound_system.play_sound(STRIKE_SOUND)
         return False
 
     @property

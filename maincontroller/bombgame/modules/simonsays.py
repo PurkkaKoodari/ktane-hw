@@ -6,7 +6,7 @@ from enum import IntEnum
 from logging import getLogger
 from random import randint, choice
 
-from bombgame.audio import register_sound, play_sound, AudioLocation
+from bombgame.audio import register_sound, AudioLocation
 from bombgame.bomb.serial import VOWELS
 from bombgame.bomb.state import BombState
 from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
@@ -147,7 +147,7 @@ class SimonSaysModule(Module):
         if self._interacted:
             if self._playing_sound:
                 self._playing_sound.stop()
-            self._playing_sound = play_sound(SIMON_SOUNDS[color])
+            self._playing_sound = self._bomb.sound_system.play_sound(SIMON_SOUNDS[color])
 
 
 SIMON_SOUNDS = {

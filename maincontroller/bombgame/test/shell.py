@@ -16,9 +16,10 @@ from asyncio import create_task, get_running_loop
 from logging import getLogger
 
 from bombgame.bus.bus import BombBus
-from bombgame.controller import init_logging, handle_fatal_error, handle_sigint, BombGameController
+from bombgame.controller import handle_fatal_error, BombGameController
+from bombgame.logging import init_logging
 from bombgame.test.mock import MockGpio, MockPhysicalSimon, MockPhysicalTimer, mock_can_bus
-from bombgame.utils import FatalError, log_errors
+from bombgame.utils import FatalError, log_errors, handle_sigint
 
 LOGGER = getLogger("BombGameTest")
 

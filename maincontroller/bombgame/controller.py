@@ -1,33 +1,24 @@
-from asyncio import run, Event, Task, create_task
-from logging import getLogger, INFO, DEBUG, StreamHandler, Formatter, LogRecord
-from signal import signal, SIGINT
+from asyncio import run, Task, create_task
+from logging import getLogger
 from sys import argv
 from typing import Optional
 
 import can
 
-from bombgame.audio import initialize_local_playback
+from bombgame.audio import BombSoundSystem
 from bombgame.bomb.bomb import Bomb
 from bombgame.bus.bus import BombBus
-from bombgame.config import BOMB_CASING, CAN_CONFIG, DMX_SERVER
-from bombgame.dmx import DMXController
+from bombgame.config import BOMB_CASING, CAN_CONFIG, ROOM_SERVER
+from bombgame.dmx import DMXController, initialize_bomb_dmx
 from bombgame.events import BombChanged
 from bombgame.gpio import Gpio, AbstractGpio
+from bombgame.logging import init_logging
 from bombgame.modules import load_modules
-from bombgame.utils import FatalError, EventSource, log_errors
-from bombgame.web.server import WebInterface
+from bombgame.roomserver import RoomServerClient
+from bombgame.utils import FatalError, EventSource, log_errors, handle_sigint
+from bombgame.web.server import WebInterface, initialize_web_ui
 
 LOGGER = getLogger("BombGame")
-
-NOISY_EVENTS = {"PingMessage", "TimerTick"}
-
-
-def filter_noisy_log(record: LogRecord):
-    if record.name == "EventSource" and len(record.args) >= 1 and type(record.args[0]).__name__ in NOISY_EVENTS:
-        return False
-    if record.name == "ModulePing" and record.levelno == DEBUG:
-        return False
-    return True
 
 
 def initialize_can() -> can.BusABC:
@@ -35,33 +26,18 @@ def initialize_can() -> can.BusABC:
     return can.Bus(**CAN_CONFIG)
 
 
-def init_logging(verbose=False):
-    handler = StreamHandler()
-    handler.addFilter(filter_noisy_log)
-    handler.setFormatter(Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s"))
-    getLogger().setLevel(DEBUG if verbose else INFO)
-    getLogger().addHandler(handler)
-    if verbose:
-        getLogger("websockets").setLevel(INFO)
-        getLogger("can").setLevel(INFO)
-
-
 def handle_fatal_error(error):
     LOGGER.fatal("Fatal error: %s", error)
     # TODO display a big failure in the UI
 
 
-def handle_sigint():
-    quit_evt = Event()
-    signal(SIGINT, lambda _1, _2: quit_evt.set())
-    return quit_evt
-
-
 class BombGameController(EventSource):
     can_bus: Optional[can.BusABC]
     gpio: Optional[AbstractGpio]
+    sound_system: Optional[BombSoundSystem]
     bus: Optional[BombBus]
     web_ui: Optional[WebInterface]
+    room_server: Optional[RoomServerClient]
     dmx: Optional[DMXController]
     bomb: Optional[Bomb]
     _bomb_init_task: Optional[Task]
@@ -70,6 +46,7 @@ class BombGameController(EventSource):
         super().__init__()
         self.can_bus = can_bus
         self.gpio = gpio
+        self.sound_system = None
         self.bus = None
         self.web_ui = None
         self.dmx = None
@@ -77,7 +54,7 @@ class BombGameController(EventSource):
         self._bomb_init_task = None
 
     async def _initialize_bomb(self):
-        self.bomb = Bomb(self.bus, self.gpio, BOMB_CASING)
+        self.bomb = Bomb(self.bus, self.gpio, self.sound_system, BOMB_CASING)
         self.trigger(BombChanged(self.bomb))
         self._bomb_init_task = create_task(self.bomb.initialize())
         await self._bomb_init_task
@@ -98,15 +75,15 @@ class BombGameController(EventSource):
         if self.gpio is None:
             self.gpio = Gpio(BOMB_CASING)
             self.gpio.start()
-        initialize_local_playback()
+        if ROOM_SERVER is not None:
+            self.room_server = RoomServerClient()
+            await self.room_server.start()
+        self.sound_system = BombSoundSystem(self.room_server)
         self.bus = BombBus(self.can_bus)
         self.bus.add_listener(FatalError, handle_fatal_error)
         self.bus.start()
-        self.web_ui = WebInterface(self)
-        await self.web_ui.start()
-        if DMX_SERVER is not None:
-            self.dmx = DMXController(self)
-            await self.dmx.start()
+        self.web_ui = await initialize_web_ui(self)
+        self.dmx = await initialize_bomb_dmx(self)
         create_task(log_errors(self._initialize_bomb()))
 
     async def stop(self):
@@ -115,8 +92,12 @@ class BombGameController(EventSource):
             await self.dmx.stop()
         await self.web_ui.stop()
         self.bus.stop()
+        if self.sound_system is not None:
+            self.sound_system.stop()  # TODO wrap in executor?
+        if self.room_server is not None:
+            await self.room_server.stop()
         if self.gpio is not None:
-            self.gpio.stop()
+            self.gpio.stop()  # TODO wrap in executor?
         if self.can_bus is not None:
             self.can_bus.shutdown()
 

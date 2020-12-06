@@ -9,11 +9,19 @@ CAN_CONFIG = {"interface": "socketcan", "channel": "can0"}
 # the URL of the room server, or None if none is in use
 # example: ROOM_SERVER = "ws://192.168.0.123:8082/"
 ROOM_SERVER = None
+# the authentication key for the room server
+ROOM_SERVER_AUTH_KEY = "password"  # TODO: change for production use
+# the port to host the room server on (only relevant when running room server on this machine)
+ROOM_SERVER_PORT = 8082
+# the timeout for authentication, in seconds (only relevant when running room server on this machine)
+ROOM_SERVER_AUTH_TIMEOUT = 2
 
 # whether or not audio playback commands should be sent to the room server
 ROOM_AUDIO_ENABLED = True
 # whether or not DMX commands should be sent to the room server
 ROOM_DMX_ENABLED = True
+# whether or not to host the Web UI on the room server
+ROOM_WEB_UI_ENABLED = False
 
 # the API URL of the QLC+ light controller, or None if none is in use
 # example: DMX_SERVER = "ws://127.0.0.1:9999/qlcplusWS"
@@ -37,8 +45,6 @@ CAN_ERROR_MAX_COUNT = 10
 
 # websocket runs at 0.0.0.0 on this port
 WEB_WS_PORT = 8081
-# compared against the string sent by the client to identify outdated (cached) UI JS
-WEB_UI_VERSION = "0.1-a1"
 # the password required from the UI
 WEB_PASSWORD = None
 # the timeout for sending the password, in seconds

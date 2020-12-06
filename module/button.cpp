@@ -46,10 +46,12 @@ void moduleReset() {
 bool moduleHandleMessage(uint16_t messageId) {
   switch (messageId) {
   case MESSAGE_MODULE_SPECIFIC_1:
-    uint8_t red = (uint8_t) ((struct button_light_data *) &canFrame.data)->red;
-    uint8_t green = (uint8_t) ((struct button_light_data *) &canFrame.data)->green;
-    uint8_t blue = (uint8_t) ((struct button_light_data *) &canFrame.data)->blue;
-    setLightStripColor(red, green, blue);
+    {
+      uint8_t red = (uint8_t) ((struct button_light_data *) &canFrame.data)->red;
+      uint8_t green = (uint8_t) ((struct button_light_data *) &canFrame.data)->green;
+      uint8_t blue = (uint8_t) ((struct button_light_data *) &canFrame.data)->blue;
+      setLightStripColor(red, green, blue);
+    }
     return true;
   default:
     return false;

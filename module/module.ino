@@ -207,6 +207,7 @@ void handleMessage() {
   case MESSAGE_MODULE_SPECIFIC_F:
     if (moduleHandleMessage(messageId))
       break;
+    [[fallthrough]];
   default:
     DEBUG_PRINTLN("Unknown message received");
     sendError(MESSAGE_RECOVERED_ERROR, ERROR_INVALID_MESSAGE);

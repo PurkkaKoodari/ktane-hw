@@ -33,8 +33,8 @@ void moduleInitHardware() {
 void setLightStripColor(uint8_t red, uint8_t green, uint8_t blue) {
   for (uint8_t i = 0; i < NUM_LEDS; i++) {
       leds[i].r = red;
-      leds[i].r = green;
-      leds[i].r = blue;
+      leds[i].g = green;
+      leds[i].b = blue;
     }
     FastLED.show();
 }
@@ -58,40 +58,39 @@ bool moduleHandleMessage(uint16_t messageId) {
 
 void moduleLoop() {
   if (mode == GAME) {
-      bool now = !digitalRead(BUTTON_PIN);
-      if (now != pressed && millis() >= debounce) {
-        pressed = now;
-        debounce = millis() + BUTTON_DEBOUNCE_LENGTH;
-        if (now) {
-          // just pressed
-          hold_trigger = millis() + BUTTON_HOLD_LENGTH;
-          DEBUG_PRINT("press at ");
-          DEBUG_PRINTLN(millis());
-          ((struct button_action_data *) &canFrame.data)->action = PRESS;
+    bool now = !digitalRead(BUTTON_PIN);
+    if (now != pressed && millis() >= debounce) {
+      pressed = now;
+      debounce = millis() + BUTTON_DEBOUNCE_LENGTH;
+      if (now) {
+        // just pressed
+        hold_trigger = millis() + BUTTON_HOLD_LENGTH;
+        DEBUG_PRINT("press at ");
+        DEBUG_PRINTLN(millis());
+        ((struct button_action_data *) &canFrame.data)->action = PRESS;
+        sendMessage(MESSAGE_MODULE_SPECIFIC_0, 1);
+      } else {
+        pressed = 0;
+        DEBUG_PRINT("release at ");
+        DEBUG_PRINTLN(millis());
+        if (hold_trigger == 0) {
+        // hold already triggered, send RELEASE_HOLD
+          ((struct button_action_data *) &canFrame.data)->action = RELEASE_HOLD;
           sendMessage(MESSAGE_MODULE_SPECIFIC_0, 1);
         } else {
-          pressed = 0;
-          DEBUG_PRINT("release at ");
-          DEBUG_PRINTLN(millis());
-          if (hold_trigger == 0) {
-          // hold already triggered, send RELEASE_HOLD
-            ((struct button_action_data *) &canFrame.data)->action = RELEASE_HOLD;
-            sendMessage(MESSAGE_MODULE_SPECIFIC_0, 1);
-          } else {
-            // hold not triggered yet, send RELEASE_PRESS
-            ((struct button_action_data *) &canFrame.data)->action = RELEASE_PRESS;
-            sendMessage(MESSAGE_MODULE_SPECIFIC_0, 1);
-          }
+          // hold not triggered yet, send RELEASE_PRESS
+          ((struct button_action_data *) &canFrame.data)->action = RELEASE_PRESS;
+          sendMessage(MESSAGE_MODULE_SPECIFIC_0, 1);
         }
       }
-      if (pressed && hold_trigger != 0 && millis() >= hold_trigger) {
-        // held long enough, send HOLD
-        DEBUG_PRINT("hold detected at ");
-        DEBUG_PRINTLN(millis());
-        hold_trigger = 0;
-        ((struct button_action_data *) &canFrame.data)->action = HOLD;
-        sendMessage(MESSAGE_MODULE_SPECIFIC_1, 1);
-      }
+    }
+    if (pressed && hold_trigger != 0 && millis() >= hold_trigger) {
+      // held long enough, send HOLD
+      DEBUG_PRINT("hold detected at ");
+      DEBUG_PRINTLN(millis());
+      hold_trigger = 0;
+      ((struct button_action_data *) &canFrame.data)->action = HOLD;
+      sendMessage(MESSAGE_MODULE_SPECIFIC_0, 1);
     }
   }
 }

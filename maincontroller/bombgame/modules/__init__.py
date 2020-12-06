@@ -4,6 +4,7 @@ MODULE_NAMES = [
     "Keypad",
     "Wires",
     "Password",
+    "Button",
 ]
 
 

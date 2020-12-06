@@ -19,6 +19,6 @@
 #define NUM_LEDS 6
 
 #define STRIKE_LED_PIN A0
-#define SOLVE_LED_PIN A1
+#define SOLVE_LED_PIN 10
 
 #endif

@@ -9,7 +9,8 @@ import can
 from bombgame.audio import initialize_local_playback
 from bombgame.bomb.bomb import Bomb
 from bombgame.bus.bus import BombBus
-from bombgame.config import BOMB_CASING, CAN_CONFIG
+from bombgame.config import BOMB_CASING, CAN_CONFIG, DMX_SERVER
+from bombgame.dmx import DMXController
 from bombgame.events import BombChanged
 from bombgame.gpio import Gpio, AbstractGpio
 from bombgame.modules import load_modules
@@ -61,6 +62,7 @@ class BombGameController(EventSource):
     gpio: Optional[AbstractGpio]
     bus: Optional[BombBus]
     web_ui: Optional[WebInterface]
+    dmx: Optional[DMXController]
     bomb: Optional[Bomb]
     _bomb_init_task: Optional[Task]
 
@@ -70,6 +72,7 @@ class BombGameController(EventSource):
         self.gpio = gpio
         self.bus = None
         self.web_ui = None
+        self.dmx = None
         self.bomb = None
         self._bomb_init_task = None
 
@@ -101,10 +104,15 @@ class BombGameController(EventSource):
         self.bus.start()
         self.web_ui = WebInterface(self)
         await self.web_ui.start()
+        if DMX_SERVER is not None:
+            self.dmx = DMXController(self)
+            await self.dmx.start()
         create_task(log_errors(self._initialize_bomb()))
 
     async def stop(self):
         self._deinitialize_bomb()
+        if self.dmx is not None:
+            await self.dmx.stop()
         await self.web_ui.stop()
         self.bus.stop()
         if self.gpio is not None:

@@ -6,10 +6,18 @@ BOMB_CASING = VanillaCasing()
 # the configuration for can.Bus
 CAN_CONFIG = {"interface": "socketcan", "channel": "can0"}
 
-# the IP address and port of the room server, or None if none is in use
+# the URL of the room server, or None if none is in use
+# example: ROOM_SERVER = "ws://192.168.0.123:8082/"
 ROOM_SERVER = None
+
 # whether or not audio playback commands should be sent to the room server
 ROOM_AUDIO_ENABLED = True
+# whether or not DMX commands should be sent to the room server
+ROOM_DMX_ENABLED = True
+
+# the API URL of the QLC+ light controller, or None if none is in use
+# example: DMX_SERVER = "ws://127.0.0.1:9999/qlcplusWS"
+DMX_SERVER = None
 
 # how many simultaneous sound effects to support
 AUDIO_CHANNELS = 16

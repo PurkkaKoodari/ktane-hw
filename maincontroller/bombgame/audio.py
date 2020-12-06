@@ -198,6 +198,8 @@ class SoundSystem(ABC):
             self._pygame_init.set_result(None)
         except BaseException as ex:
             self._pygame_init.set_exception(ex)
+            pygame.quit()
+            return
 
         try:
             while True:

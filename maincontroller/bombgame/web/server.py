@@ -173,7 +173,7 @@ class ErrorMessage(WebInterfaceMessage):
         self.message = message
 
 
-def _parse_message_from_client(client: WebSocketServerProtocol, data: Union[str, bytes]):
+async def _parse_message_from_client(client: WebSocketServerProtocol, data: Union[str, bytes]):
     try:
         if not isinstance(data, str):
             raise InvalidMessage("only text messages are valid")
@@ -190,13 +190,13 @@ class WebInterface(EventSource, SingleClientWebSocketServer):
         SingleClientWebSocketServer.__init__(self)
         self._controller = controller
 
-    async def _send_to_client(self, message: WebInterfaceMessage, client: Optional[WebSocketServerProtocol] = None):
-        await super()._send_to_client(message.serialize(), client)
+    async def _send(self, message: WebInterfaceMessage, client: Optional[WebSocketServerProtocol] = None):
+        await self._send_to_client(message.serialize(), client)
 
     async def _new_client_connected(self, client: WebSocketServerProtocol):
         try:
             data = await wait_for(client.recv(), WEB_LOGIN_TIMEOUT)
-            handshake = _parse_message_from_client(client, data)
+            handshake = await _parse_message_from_client(client, data)
         except AsyncTimeoutError:
             handshake = None
 
@@ -211,22 +211,22 @@ class WebInterface(EventSource, SingleClientWebSocketServer):
                 await close_client_invalid_message(client, "password is incorrect", 4003)
 
         # TODO send current state
-        await self._send_to_client(ConfigMessage({}), client)
-        await self._send_to_client(BombInfoMessage(self._controller.bomb.edgework.serial_number), client)
+        await self._send(ConfigMessage({}), client)
+        await self._send(BombInfoMessage(self._controller.bomb.edgework.serial_number), client)
         for module in self._controller.bomb.modules:
             await self._send_module(module, client)
-        await self._send_to_client(StateMessage(self._controller.bomb._state.name), client)
+        await self._send(StateMessage(self._controller.bomb._state.name), client)
 
     async def _bomb_changed(self, event: BombChanged):
-        await self._send_to_client(ResetMessage())
-        await self._send_to_client(BombInfoMessage(event.bomb.edgework.serial_number))
+        await self._send(ResetMessage())
+        await self._send(BombInfoMessage(event.bomb.edgework.serial_number))
         event.bomb.add_listener(BombModuleAdded, self._handle_module_add)
         event.bomb.add_listener(BombStateChanged, self._handle_bomb_state)
         event.bomb.add_listener(ModuleStateChanged, self._handle_module_update)
         event.bomb.add_listener(BombError, self._log_bomb_error)
 
     async def _handle_message(self, client: WebSocketServerProtocol, data: Union[str, bytes]):
-        message = _parse_message_from_client(client, data)
+        message = await _parse_message_from_client(client, data)
         if isinstance(message, ResetMessage):
             self._controller.reset()
         elif isinstance(message, ConfigMessage):
@@ -239,7 +239,7 @@ class WebInterface(EventSource, SingleClientWebSocketServer):
             await close_client_invalid_message(client, "invalid message type")
 
     async def _send_module(self, module: Module, client: Optional[WebSocketServerProtocol] = None):
-        await self._send_to_client(AddModuleMessage(
+        await self._send(AddModuleMessage(
             location=module.location,
             module_type=module.bus_id.type,
             serial=module.bus_id.serial,
@@ -249,17 +249,17 @@ class WebInterface(EventSource, SingleClientWebSocketServer):
         ), client)
 
     async def _log_bomb_error(self, error: BombError):
-        await self._send_to_client(ErrorMessage(error.level.name, error.location, error.details))
+        await self._send(ErrorMessage(error.level.name, error.location, error.details))
 
     async def _handle_bomb_state(self, event: BombStateChanged):
         if event.state != BombState.DEINITIALIZED:
-            await self._send_to_client(StateMessage(event.state.name))
+            await self._send(StateMessage(event.state.name))
 
     async def _handle_module_add(self, event: BombModuleAdded):
         await self._send_module(event.module)
 
     async def _handle_module_update(self, event: ModuleStateChanged):
-        await self._send_to_client(UpdateModuleMessage(
+        await self._send(UpdateModuleMessage(
             location=event.module.location,
             state=event.module.state.name,
             details=event.module.ui_state()

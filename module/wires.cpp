@@ -36,7 +36,7 @@ const char *color_names[8] = {
 const uint8_t led_row_pins[2] = { LED_ROW_PINS };
 const uint8_t led_column_pins[3] = { LED_COLUMN_PINS };
 
-uint8_t led_states;
+uint8_t led_states = 0;
 #endif
 
 struct wire_colors_data {
@@ -54,17 +54,18 @@ void moduleInitHardware() {
   }
 #if MODULE_TYPE == MODULE_TYPE_COMPLICATED_WIRES
   for (uint8_t i = 0; i < 2; i++) {
-    digitalWrite(led_row_pins[i], LOW);
+    digitalWrite(led_row_pins[i], HIGH);
     pinMode(led_row_pins[i], OUTPUT);
   }
   for (uint8_t i = 0; i < 3; i++) {
-    digitalWrite(led_column_pins[i], HIGH);
+    digitalWrite(led_column_pins[i], LOW);
     pinMode(led_column_pins[i], OUTPUT);
   }
 #endif
 }
 
 void moduleReset() {
+  led_states = 0;
   // reset consecutive measurements to ensure we re-send the wire values
   for (uint8_t i = 0; i < 6; i++) {
     consecutive_measurements[i] = 0;
@@ -89,13 +90,18 @@ uint8_t current_led_row = 0;
 
 void moduleLoop() {
 #if MODULE_TYPE == MODULE_TYPE_COMPLICATED_WIRES
-  digitalWrite(led_row_pins[current_led_row], LOW);
-  current_led_row = (current_led_row + 1) % 2;
-  digitalWrite(led_row_pins[current_led_row], HIGH);
-  uint8_t led = current_led_row * 3;
   for (uint8_t i = 0; i < 3; i++) {
-    digitalWrite(led_column_pins[i], (led_states >> led) & 1);
-    led++;
+    digitalWrite(led_column_pins[i], LOW);
+  }
+  digitalWrite(led_row_pins[current_led_row], HIGH);
+  current_led_row = (current_led_row + 1) % 2;
+  if (!exploded) {
+    digitalWrite(led_row_pins[current_led_row], LOW);
+    uint8_t led = current_led_row * 3;
+    for (uint8_t i = 0; i < 3; i++) {
+      digitalWrite(led_column_pins[i], (led_states >> led) & 1);
+      led++;
+    }
   }
 #endif
 

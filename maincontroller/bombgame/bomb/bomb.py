@@ -88,7 +88,7 @@ class Bomb(EventSource):
         # get modules that are ready
         connected_modules = await self._gpio.check_ready_changes()
         LOGGER.debug("Detected %d modules", len(connected_modules))
-        self._state = BombState.INITIALIZING
+        self._state = BombState.DETECTING_MODULES
         # initialize each module in order
         for location in connected_modules:
             LOGGER.debug("Initializing module at %s", self.casing.location(location))
@@ -117,8 +117,10 @@ class Bomb(EventSource):
         self.sound_system.load_sounds({Bomb} | set(type(module) for module in self.modules))
         # wait for all modules to initialize
         if not all(module.state == ModuleState.CONFIGURATION for module in self.modules):
+            self._state = BombState.INITIALIZING_MODULES
             LOGGER.debug("All modules recognized, waiting for initialization")
             await self._init_cond.wait_for(lambda: self._state == BombState.INITIALIZED)
+        self._state = BombState.INITIALIZED
         self._state_lock.release()
         LOGGER.debug("Initialization complete")
         self.trigger(BombStateChanged(BombState.INITIALIZED))
@@ -176,10 +178,10 @@ class Bomb(EventSource):
             if self._state in (BombState.UNINITIALIZED, BombState.RESETTING, BombState.DEINITIALIZED):
                 return
             if isinstance(message, AnnounceMessage):
-                if self._state != BombState.INITIALIZING:
+                if self._state != BombState.DETECTING_MODULES:
                     # TODO implement module hotswap
                     self.trigger(BombError(None, BombErrorLevel.WARNING,
-                                           f"{message.module} was announced after initialization."))
+                                           f"{message.module} was announced after module detection phase."))
                     return
                 if message.module in self.modules_by_bus_id:
                     self._init_fail(f"Multiple modules were announced with id {message.module}.")
@@ -278,7 +280,7 @@ class Bomb(EventSource):
 
     async def _handle_module_state_change(self, _: ModuleStateChanged):
         async with self._state_lock:
-            if self._state == BombState.INITIALIZING and all(module.state == ModuleState.CONFIGURATION for module in self.modules):
+            if self._state == BombState.INITIALIZING_MODULES and all(module.state == ModuleState.CONFIGURATION for module in self.modules):
                 self._init_cond.notify_all()
                 self._state = BombState.INITIALIZED
                 return

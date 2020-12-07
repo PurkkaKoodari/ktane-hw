@@ -227,18 +227,23 @@ class Bomb(EventSource):
 
     def start_game(self):
         """Starts the game with the initial wait phase."""
-        # TODO: prevent multiple instances from running
         self.create_task(self._start_game_task())
 
     async def _start_game_task(self):
+        if self._state != BombState.INITIALIZED:
+            return
+        self._state = BombState.GAME_STARTING
+        self.trigger(BombStateChanged(BombState.GAME_STARTING))
         for module in self.modules:
             await module.send_state()
             module.state = ModuleState.GAME
-        self._state = BombState.GAME_STARTING
-        self.trigger(BombStateChanged(BombState.GAME_STARTING))
         await self.send(LaunchGameMessage(ModuleId.BROADCAST))
-        # TODO: add at least an option to manually do the starting from UI
-        await async_sleep(GAME_START_DELAY)
+
+    def start_timer(self):
+        """Starts the timer."""
+        self.create_task(self._start_timer_task())
+
+    async def _start_timer_task(self):
         if self._state != BombState.GAME_STARTING:
             return
         self._state = BombState.GAME_STARTED

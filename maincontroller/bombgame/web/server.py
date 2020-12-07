@@ -90,6 +90,13 @@ class StartGameMessage(WebInterfaceMessage):
 
 
 @MESSAGE_TYPE_REGISTRY.register
+class StartTimerMessage(WebInterfaceMessage):
+    message_type = "start_timer"
+    fields = {}
+    receivable = True
+
+
+@MESSAGE_TYPE_REGISTRY.register
 class PauseGameMessage(WebInterfaceMessage):
     message_type = "pause_game"
     fields = {}
@@ -235,8 +242,9 @@ class WebInterface(EventSource, SingleClientWebSocketServer):
             # TODO
             await close_client_invalid_message(client, "config not implemented")
         elif isinstance(message, StartGameMessage):
-            if self._controller.bomb._state == BombState.INITIALIZED:
-                self._controller.bomb.start_game()
+            self._controller.bomb.start_game()
+        elif isinstance(message, StartTimerMessage):
+            self._controller.bomb.start_timer()
         else:
             await close_client_invalid_message(client, "invalid message type")
 

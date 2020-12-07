@@ -104,6 +104,11 @@
             }
             moduleElems.forEach(makeNonpresentModuleElem)
             break
+        case "state":
+            log(`[STATE] ${data.state}`)
+            document.getElementById("startGame").style.display = data.state === "INITIALIZED" ? null : "none"
+            document.getElementById("startTimer").style.display = data.state === "GAME_STARTING" ? null : "none"
+            break
         case "add_module":
             assert(modules[data.location] === null)
             modules[data.location] = {
@@ -160,6 +165,12 @@
         if (!connected) return
         ws.send(JSON.stringify({
             "type": "start_game"
+        }))
+    })
+    document.getElementById("startTimer").addEventListener("click", e => {
+        if (!connected) return
+        ws.send(JSON.stringify({
+            "type": "start_timer"
         }))
     })
 })()

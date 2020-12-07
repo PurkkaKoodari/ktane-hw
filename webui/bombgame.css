@@ -23,6 +23,11 @@
     height: 15vh;
     width: 15vh;
     position: relative;
+    display: flex;
+    flex-direction: column;
+}
+.module .moduleName {
+    margin: 0;
 }
 .module .statusLed, .module .errorIndicator {
     position: absolute;
@@ -72,4 +77,6 @@
     flex-grow: 1;
     flex-shrink: 1;
     overflow: hidden auto;
+    font-family: monospace;
+    word-wrap: break-word;
 }

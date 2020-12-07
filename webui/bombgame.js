@@ -54,7 +54,7 @@
         elem.classList.add("state_" + module.state.toLowerCase())
         elem.classList.add("errorLevel_" + module.error_level.toLowerCase())
         elem.querySelector(".moduleName").textContent = module.module_name
-        elem.querySelector(".details").textContent = `Serial: ${module.serial}\nState: ${module.state}`
+        elem.querySelector(".details").textContent = `Serial: ${module.serial}\nState: ${module.state}\n${JSON.stringify(module.details)}`
     }
 
     const ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}${WS_PATH}`)

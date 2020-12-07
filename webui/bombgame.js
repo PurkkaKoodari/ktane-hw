@@ -6,8 +6,12 @@
     const MODULE_NAMES = {
         1: "Timer",
         2: "Wires",
+        3: "Button",
         4: "Keypad",
-        5: "Simon Says"
+        5: "Simon Says",
+        9: "Complicated Wires",
+        12: "Password",
+        13: "Venting Gas",
     }
 
     const ERROR_LEVELS = ["NONE", "INFO", "RECOVERED", "WARNING", "RECOVERABLE", "MINOR", "MAJOR", "INIT_FAILURE", "FATAL"]

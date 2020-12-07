@@ -5,6 +5,7 @@ MODULE_NAMES = [
     "Wires",
     "Password",
     "Button",
+    "ComplicatedWires",
 ]
 
 

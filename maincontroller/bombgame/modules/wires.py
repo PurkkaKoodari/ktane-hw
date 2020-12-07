@@ -4,13 +4,14 @@ import struct
 from enum import IntEnum
 from logging import getLogger
 from random import choice, randint, sample
-from typing import Sequence
+from typing import Sequence, Dict, Callable, Tuple
 
+from bombgame.bomb.edgework import Edgework
 from bombgame.bomb.serial import ODD
 from bombgame.bomb.state import BombState
 from bombgame.bus.messages import BusMessage, BusMessageId, ModuleId, BusMessageDirection
 from bombgame.events import BombStateChanged, BombError, BombErrorLevel, ModuleStateChanged
-from bombgame.modules.base import Module, ModuleState
+from bombgame.modules.base import Module, ModuleState, NoSolution
 from bombgame.modules.registry import MODULE_ID_REGISTRY, MODULE_MESSAGE_ID_REGISTRY
 
 LOGGER = getLogger("Wires")
@@ -28,12 +29,15 @@ class WireColor(IntEnum):
     INVALID = 78
 
 
+VALID_COLORS = (WireColor.RED, WireColor.BLUE, WireColor.YELLOW, WireColor.BLACK, WireColor.WHITE)
 
-REAL_COLORS = (WireColor.RED, WireColor.BLUE, WireColor.YELLOW, WireColor.BLACK, WireColor.WHITE)
+
+RuleCondition = Callable[[Sequence[WireColor], bool], bool]
+RuleIndex = Callable[[Sequence[WireColor]], int]
 
 
-def _nth(n, rule):
-    def matcher(wires):
+def _nth(n: int, rule: Callable[[WireColor], bool]) -> RuleIndex:
+    def matcher(wires: Sequence[WireColor]) -> int:
         matches = []
         for pos, wire in enumerate(wires):
             if rule(wire):
@@ -42,15 +46,15 @@ def _nth(n, rule):
     return matcher
 
 
-def _nth_wire(n):
+def _nth_wire(n: int):
     return _nth(n, lambda wire: wire is not None)
 
 
-def _nth_colored(n, color):
+def _nth_colored(n: int, color: WireColor):
     return _nth(n, lambda wire: wire == color)
 
 
-RULES = {
+RULES: Dict[int, Sequence[Tuple[RuleCondition, RuleIndex]]] = {
     3: [
         (lambda clrs, _: WireColor.RED not in clrs, _nth_wire(1)),
         (lambda clrs, _: clrs[-1] == WireColor.WHITE, _nth_wire(-1)),
@@ -79,34 +83,42 @@ RULES = {
 }
 
 
+def _compute_solution(edgework: Edgework, wires: Sequence[WireColor]):
+    wire_colors = [wire for wire in wires if wire in VALID_COLORS]
+
+    if len(wire_colors) not in RULES:
+        raise NoSolution
+
+    last_odd = edgework.serial_number.last_is(ODD)
+    for condition, rule in RULES[len(wire_colors)]:
+        if condition(wire_colors, last_odd):
+            return rule(wires)
+    else:
+        raise AssertionError("failed to generate solution")
+
+
 @MODULE_ID_REGISTRY.register
 class WiresModule(Module):
     module_id = 2
 
-    __slots__ = ("_initial_connected", "_cut", "_connected", "_solution")
+    __slots__ = ("_initial_connected", "_connected", "_cut", "_solution")
 
     def __init__(self, bomb, bus_id, location, hw_version, sw_version):
         super().__init__(bomb, bus_id, location, hw_version, sw_version)
-        self._initial_connected = None
-        self._cut = [False] * 6
         self._initial_connected = [WireColor.DISCONNECTED] * 6
         self._connected = [WireColor.DISCONNECTED] * 6
+        self._cut = [False] * 6
         self._solution = None
         bomb.add_listener(BombStateChanged, self._handle_bomb_state)
 
     def generate(self):
-        last_odd = self._bomb.edgework.serial_number.last_is(ODD)
-        count = randint(3, 6)
-        colors = [choice(REAL_COLORS) for _ in range(count)]
-        indices = sample(range(6), count)
-        for index, color in zip(indices, colors):
-            self._initial_connected[index] = color
-        for condition, rule in RULES[count]:
-            if condition(colors, last_odd):
-                self._solution = rule(self._initial_connected)
-                break
-        else:
-            raise AssertionError("failed to generate solution")
+        wire_count = randint(3, 6)
+        wire_positions = sample(range(6), wire_count)
+        wire_colors = [choice(VALID_COLORS) for _ in range(wire_count)]
+        for pos, color in zip(wire_positions, wire_colors):
+            self._initial_connected[pos] = color
+
+        self._solution = _compute_solution(self._bomb.edgework, self._initial_connected)
 
     async def send_state(self):
         pass
@@ -123,11 +135,26 @@ class WiresModule(Module):
 
     def _handle_bomb_state(self, event: BombStateChanged):
         if event.state == BombState.GAME_STARTING:
-            bad_pos = [str(pos) for pos in range(6) if self._initial_connected[pos] != self._connected[pos]]
+            bad_pos = [str(pos + 1) for pos in range(6) if self._initial_connected[pos] != self._connected[pos]]
             if bad_pos:
-                self._bomb.trigger(BombError(self, BombErrorLevel.MAJOR,
-                                             f"The wires in positions {', '.join(bad_pos)} do not match the initial "
-                                             f"state, potentially making the module unsolvable."))
+                try:
+                    new_solution = _compute_solution(self._bomb.edgework, self._connected)
+                except NoSolution:
+                    new_solution = -1
+
+                if new_solution == self._solution:
+                    self._bomb.trigger(BombError(self, BombErrorLevel.MINOR,
+                                                 f"The wires in positions {', '.join(bad_pos)} do not match the "
+                                                 f"expected state, but the solution happens to be the same."))
+                elif self._connected[self._solution] != WireColor.DISCONNECTED:
+                    self._bomb.trigger(BombError(self, BombErrorLevel.MAJOR,
+                                                 f"The wires in positions {', '.join(bad_pos)} do not match the "
+                                                 f"expected state, but the module can still be defused by cutting the "
+                                                 f"wire in position {self._solution + 1}."))
+                else:
+                    self._bomb.trigger(BombError(self, BombErrorLevel.MAJOR,
+                                                 f"The wires in positions {', '.join(bad_pos)} do not match the "
+                                                 f"expected state, making the module unsolvable."))
 
     async def handle_message(self, message: BusMessage):
         if isinstance(message, WiresUpdateMessage):

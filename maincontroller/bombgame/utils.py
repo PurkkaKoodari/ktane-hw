@@ -4,7 +4,7 @@ from asyncio.locks import Event
 from collections import deque
 from concurrent.futures import Executor, Future
 from logging import getLogger
-from signal import signal, SIGINT
+from signal import SIGINT
 from threading import Thread, RLock, Condition
 from typing import Any, Union, Callable, NamedTuple, Awaitable, Dict, TypeVar, Deque, Tuple, Sequence, Mapping
 

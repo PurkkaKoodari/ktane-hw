@@ -60,6 +60,7 @@ class SingleClientWebSocketServer(ABC):
             while True:
                 await self._handle_message(client, await client.recv())
         except ConnectionClosed:
+            LOGGER.debug("Client %s disconnected", client.remote_address)
             if client is self._client:
                 self._client = None
             return

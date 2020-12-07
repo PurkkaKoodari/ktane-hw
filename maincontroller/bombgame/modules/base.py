@@ -160,3 +160,7 @@ class Module(ABC):
 class NeedyModule(Module, ABC):
     is_needy = True
     must_solve = False
+
+
+class NoSolution(Exception):
+    """Raised when no solution can be computed."""

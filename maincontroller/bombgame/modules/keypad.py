@@ -87,7 +87,10 @@ class KeypadModule(Module):
 
     async def handle_message(self, message: BusMessage):
         if isinstance(message, KeypadPressMessage) and self.state in (ModuleState.GAME, ModuleState.DEFUSED):
-            if len(self._pressed) < len(self._solution) and message.position == self._solution[len(self._pressed)]:
+            if message.position in self._pressed:
+                # ignore already-pressed buttons
+                pass
+            elif len(self._pressed) < len(self._solution) and message.position == self._solution[len(self._pressed)]:
                 self._pressed.append(message.position)
                 await self._bomb.send(KeypadSetLedsMessage(self.bus_id, leds=self._pressed))
                 if len(self._pressed) == len(self._solution):

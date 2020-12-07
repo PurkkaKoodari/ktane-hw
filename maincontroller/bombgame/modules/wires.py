@@ -47,7 +47,7 @@ def _nth(n: int, rule: Callable[[WireColor], bool]) -> RuleIndex:
 
 
 def _nth_wire(n: int):
-    return _nth(n, lambda wire: wire is not None)
+    return _nth(n, lambda wire: wire != WireColor.DISCONNECTED)
 
 
 def _nth_colored(n: int, color: WireColor):

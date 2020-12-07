@@ -11,7 +11,7 @@ from bombgame.bus.bus import BombBus
 from bombgame.bus.messages import (BusMessage, ResetMessage, AnnounceMessage, DefuseBombMessage, ExplodeBombMessage,
                                    ModuleId, LaunchGameMessage, StartTimerMessage)
 from bombgame.casings import Casing
-from bombgame.config import GAME_START_DELAY, MODULE_RESET_PERIOD, MODULE_ANNOUNCE_TIMEOUT, DEFAULT_MAX_STRIKES
+from bombgame.config import MODULE_RESET_PERIOD, MODULE_ANNOUNCE_TIMEOUT, DEFAULT_MAX_STRIKES
 from bombgame.events import (BombErrorLevel, BombError, BombModuleAdded, ModuleStateChanged, BombStateChanged,
                              ModuleStriked, TimerTick)
 from bombgame.gpio import AbstractGpio, ModuleReadyChange
@@ -300,6 +300,8 @@ class Bomb(EventSource):
         Returns ``True`` if the bomb exploded due to the strike, in which case the module should immediately stop
         sending messages to the bus.
         """
+        if self._state == BombState.EXPLODED:
+            return True
         self.strikes += 1
         if self.strikes >= self.max_strikes:
             await self.explode()

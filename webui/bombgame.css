@@ -1,18 +1,83 @@
+html, body {
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    font-family: sans-serif;
+}
+body {
+    display: flex;
+    flex-direction: column;
+}
 #errorLog {
-    height: 40vh;
+    flex: 1;
     overflow: hidden scroll;
     white-space: pre-line;
 }
+#widgets {
+    flex: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+}
+#widgets > div {
+    border: 1px solid black;
+    padding: 20px 5px 5px;
+    height: 60px;
+    position: relative;
+    margin-right: 5px;
+    display: flex;
+    align-items: center;
+}
+#widgets .type {
+    position: absolute;
+    left: 5px;
+    top: 2px;
+}
+#widgets .serial .number {
+    font-family: monospace;
+    font-size: 30px;
+}
+#widgets .indicator .name {
+    font-family: monospace;
+    font-size: 30px;
+}
+#widgets .indicator .light {
+    border: 1px solid black;
+    border-radius: 30px;
+    width: 30px;
+    height: 30px;
+    background: #333;
+    margin-left: 10px;
+}
+#widgets .indicator .light.lit {
+    background: #f8f8f8;
+}
+#widgets .portPlate .ports {
+    font-size: 20px;
+}
+#widgets .battery {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100px;
+}
+#widgets .battery .aa, #widgets .battery .d {
+    flex: 1;
+    background: linear-gradient(to right, yellow 10%, red 10.001%, red 80%, yellow 80.001%) no-repeat;
+}
+#widgets .battery .aa + .aa {
+    margin-top: 10px;
+}
 #bomb {
-    display: inline-flex;
+    flex: 0;
+    display: flex;
 }
 .bombSide {
     display: grid;
     grid-template-areas: 'title title title' 'mod1 mod2 mod3' 'mod4 mod5 mod6';
-    grid-gap: 10px;
+    grid-gap: 1vw;
 }
 .bombSide:first-child {
-    margin-right: 20px;
+    margin-right: 2vw;
 }
 .bombSide .title {
     grid-area: title;
@@ -20,8 +85,10 @@
 }
 .module {
     border: 1px solid black;
-    height: 15vh;
-    width: 15vh;
+    height: 15vw;
+    width: 15vw;
+    max-height: 20vh;
+    max-width: 20vh;
     position: relative;
     display: flex;
     flex-direction: column;

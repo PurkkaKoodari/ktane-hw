@@ -85,7 +85,7 @@ class Indicator(Widget):
 
     def serialize(self):
         return {
-            "type": "port_plate",
+            "type": "indicator",
             "name": self.name.name,
             "lit": self.lit,
         }

@@ -57,6 +57,15 @@
         elem.querySelector(".details").textContent = `Serial: ${module.serial}\nState: ${module.state}\n${JSON.stringify(module.details)}`
     }
 
+    const addWidget = (type, contents) => {
+        document.getElementById("widgets").innerHTML += `
+            <div class="${type}">
+                <div class="type">${type.toUpperCase()}</div>
+                ${contents}
+            </div>
+        `
+    }
+
     const ws = new WebSocket(`ws://${location.hostname}:${WS_PORT}${WS_PATH}`)
     ws.addEventListener("close", e => {
         switch (e.code) {
@@ -130,6 +139,35 @@
                 details: data.details
             }
             updateModuleElem(modules[data.location], moduleElems[data.location])
+            break
+        case "bomb":
+            document.getElementById("widgets").innerHTML = ""
+            addWidget("serial", `
+                <div class="number">${data.serial_number}</div>
+            `)
+            for (const widget of data.widgets) {
+                switch (widget.type) {
+                case "port_plate":
+                    addWidget("portPlate", `
+                        <div class="ports">${widget.ports.join(" ") || "empty"}</div>
+                    `)
+                    break
+                case "indicator":
+                    addWidget("indicator", `
+                        <div class="name">${widget.name}</div>
+                        <div class="light ${widget.lit ? "lit" : "unlit"}"></div>
+                    `)
+                    break
+                case "battery":
+                    addWidget("battery", widget.battery_type === "AA" ? `
+                        <div class="aa"></div>
+                        <div class="aa"></div>
+                    ` : `
+                        <div class="d"></div>
+                    `)
+                    break
+                }
+            }
             break
         case "error":
             if (data.module !== null && modules[data.module] !== null) {

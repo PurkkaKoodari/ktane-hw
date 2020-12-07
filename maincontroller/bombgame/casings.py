@@ -47,7 +47,7 @@ class VanillaCasing(Casing):
             raise ValueError("index must be between 0 and 11")
         front = index % 4 < 2
         column = index // 4 + 1 if front else 3 - index // 4
-        return f"{'front' if front else f'back'} side, row {index % 2 + 1}, column {column}"
+        return f"{'front' if front else f'back'} side, row {index % 2 + 1}, column {column} (board {index // 4 + 1} port {index % 4 + 1})"
 
     gpio_config = (
         MCP23017Spec(0x20, (0, 2, 4, 6), (1, 3, 5, 7), ()),

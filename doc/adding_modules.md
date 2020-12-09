@@ -47,6 +47,10 @@ A module starts with hardware. Most modules consist of the following:
 
 Before designing a new PCB, see if the [base module PCB][base-pcb] is enough for your needs. It breaks out many pins of the Arduino, including PWM and I&sup2;C and adds pins for two common LED matrix drivers, the HT1632C and HT16K33. It can be used as-is or by adding an adapter board. If you decide you need your own board, the base PCB is a good starting point as well.
 
+Most module electronics should work with 5V. The MODULE_READY and MODULE_ENABLE signals, as well as the CAN bus, are configured for 5V operation. If your components need 3.3V, the module will need its own regulator.
+
+The module connector additionally provides a 12V pin that can be used for more power-hungry peripherals such as motors or solenoids. This pin is not strictly 12V, but is intended to be the unregulated battery voltage &mdash; it may be anything from 11V to 15V, so make sure your components can handle that. Some bomb casings may not provide 12V power at all, as most modules don't use it.
+
 ## 2. Build the module firmware
 
 The Arduino-based firmware needs to be extended to support your module.

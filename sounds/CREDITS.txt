@@ -4,7 +4,9 @@ Downloaded from http://soundbible.com/1234-Bomb.html
 CC BY 3.0
 
 strike.wav
-Modified, original created by kwahmah_02
+Modified by PurkkaKoodari, original created by kwahmah_02
 Downloaded from https://freesound.org/people/kwahmah_02/sounds/244932/
 CC BY 3.0
 
+All other files in this folder are created for this project by PurkkaKoodari
+and licensed under either CC BY 3.0 or the MIT license.

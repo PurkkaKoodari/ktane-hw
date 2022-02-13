@@ -1,10 +1,10 @@
-html, body {
+html, body, #root, #app {
     padding: 0;
     margin: 0;
     height: 100%;
     font-family: sans-serif;
 }
-body {
+#app {
     display: flex;
     flex-direction: column;
 }
@@ -119,25 +119,7 @@ body {
     background: red;
 }
 .module .errorIndicator {
-    background: white;
-}
-.module.errorLevel_info .errorIndicator, .module.errorLevel_recovered .errorIndicator {
-    background: royalblue;
-}
-.module.errorLevel_warning .errorIndicator {
-    background: yellow;
-}
-.module.errorLevel_recoverable .errorIndicator {
-    background: darkorange;
-}
-.module.errorLevel_minor .errorIndicator {
-    background: orangered;
-}
-.module.errorLevel_major .errorIndicator {
-    background: red;
-}
-.module.errorLevel_fatal {
-    background: darkred;
+    background: transparent;
 }
 .module .details {
     white-space: pre-line;

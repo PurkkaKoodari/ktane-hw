@@ -228,7 +228,7 @@ class DMXController:
             self._backend.change_scene(SCENE_EMERGENCY)
 
 
-async def initialize_local_dmx_backend() -> Optional[DMXBackend]:
+def initialize_local_dmx_backend() -> Optional[DMXBackend]:
     if DMX_SERVER is not None:
         return QLCPlusDMXBackend()
     else:

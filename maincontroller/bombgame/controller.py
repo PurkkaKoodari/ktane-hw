@@ -45,6 +45,7 @@ class BombGameController(EventSource):
         self.can_bus = can_bus
         self.gpio = gpio
         self.sound_system = None
+        self.room_server = None
         self.bus = None
         self.web_ui = None
         self.dmx = None

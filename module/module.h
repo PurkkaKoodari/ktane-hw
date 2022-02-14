@@ -165,6 +165,8 @@ void moduleExplode();
 void moduleDefuse();
 void moduleSolve();
 void moduleStrike();
+void moduleNeedyActivate();
+void moduleNeedyDeactivate();
 
 bool moduleHandleMessage(uint16_t message_id);
 

@@ -21,7 +21,7 @@ export type ModuleState = {
 
 export type BatteryState = {
   type: "battery";
-  battery_type: "aa" | "d";
+  battery_type: "AA" | "D";
 };
 
 export type PortPlateState = {

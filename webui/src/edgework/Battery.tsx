@@ -9,7 +9,7 @@ export default function Battery({ details }: Props) {
   return (
     <div className="battery">
       <div className="type">BATTERY</div>
-      {details.battery_type === "aa" ? (
+      {details.battery_type === "AA" ? (
         <>
           <div className="aa" />
           <div className="aa" />

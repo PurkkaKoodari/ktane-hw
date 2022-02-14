@@ -52,7 +52,7 @@ bool exploded = false;
 MCP2515 canBus(MCP_CS_PIN);
 struct can_frame canFrame;
 
-bool incoming = false;
+volatile bool incoming = false;
 
 void messageReceived() {
   incoming = true;
@@ -96,6 +96,8 @@ __attribute__((weak)) void moduleExplode() {}
 __attribute__((weak)) void moduleDefuse() {}
 __attribute__((weak)) void moduleSolve() {}
 __attribute__((weak)) void moduleStrike() {}
+__attribute__((weak)) void moduleNeedyActivate() {}
+__attribute__((weak)) void moduleNeedyDeactivate() {}
 
 //////////////////////////// MAIN FUNCTIONS ////////////////////////////
 
@@ -188,6 +190,12 @@ void handleMessage() {
     strike_until = 0;
     solved = true;
     moduleSolve();
+    break;
+  case MESSAGE_NEEDY_ACTIVATE:
+    moduleNeedyActivate();
+    break;
+  case MESSAGE_NEEDY_DEACTIVATE:
+    moduleNeedyDeactivate();
     break;
   case MESSAGE_MODULE_SPECIFIC_0:
   case MESSAGE_MODULE_SPECIFIC_1:

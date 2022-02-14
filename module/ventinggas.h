@@ -16,6 +16,11 @@
 
 #define HT16K33_ADDR 0x70
 
+#define YES_BTN_PIN 4
+#define NO_BTN_PIN 7
+
+#define NEEDY_TIME 40
+
 #define NO_STATUS_LED
 
 #endif

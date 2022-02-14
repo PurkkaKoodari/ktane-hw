@@ -211,8 +211,7 @@ class DMXController:
         event.bomb.add_listener(TimerTick, self._timer_tick)
 
     def _bomb_state_change(self, event: BombStateChanged):
-        if event.state == BombState.INITIALIZED:
-            # TODO: trigger this based on reset, not init completing
+        if event.state == BombState.RESETTING:
             self._backend.change_scene(SCENE_NORMAL)
         elif event.state == BombState.GAME_STARTING:
             self._backend.change_scene(SCENE_BEFORE_START)

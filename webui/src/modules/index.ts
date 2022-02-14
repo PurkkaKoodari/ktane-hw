@@ -5,6 +5,7 @@ import KeypadModule from "./KeypadModule";
 import PasswordModule from "./PasswordModule";
 import SimonSaysModule from "./SimonSaysModule";
 import TimerModule from "./TimerModule";
+import VentingGasModule from "./VentingGasModule";
 import WiresModule from "./WiresModule";
 
 export type ModuleComponent = ComponentType & {
@@ -19,7 +20,7 @@ const modules: Record<number, ModuleComponent> = {
   5: SimonSaysModule,
   9: ComplicatedWiresModule,
   12: PasswordModule,
-  // 13: "Venting Gas",
+  13: VentingGasModule,
 };
 
 export default modules;

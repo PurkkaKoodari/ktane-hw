@@ -16,6 +16,7 @@ from bombgame.events import (BombErrorLevel, BombError, BombModuleAdded, ModuleS
                              ModuleStriked, TimerTick)
 from bombgame.gpio import AbstractGpio, ModuleReadyChange
 from bombgame.modules.base import ModuleState, Module
+from bombgame.modules.needy import NeedyModule
 from bombgame.modules.registry import MODULE_ID_REGISTRY
 from bombgame.modules.timer import TimerModule
 from bombgame.utils import EventSource, log_errors
@@ -114,7 +115,7 @@ class Bomb(EventSource):
         self.create_task(self._ping_loop())
         # load sounds for the modules
         # TODO do this in an auxiliary thread (but that will require us to move all audio stuff in said thread)
-        self.sound_system.load_sounds({Bomb} | set(type(module) for module in self.modules))
+        self.sound_system.load_sounds({Bomb, Module, NeedyModule} | set(type(module) for module in self.modules))
         # wait for all modules to initialize
         if not all(module.state == ModuleState.CONFIGURATION for module in self.modules):
             self._state = BombState.INITIALIZING_MODULES
@@ -293,6 +294,8 @@ class Bomb(EventSource):
                 self._state = BombState.DEFUSED
                 self.trigger(BombStateChanged(BombState.DEFUSED))
                 await self.send(DefuseBombMessage(ModuleId.BROADCAST))
+                self.sound_system.play_sound(DEFUSED_SOUND)
+                self.sound_system.play_sound(DEFUSED_FANFARE)
 
     async def strike(self, module: Module) -> bool:
         """Called by modules to indicate a strike.
@@ -306,11 +309,10 @@ class Bomb(EventSource):
         if self.strikes >= self.max_strikes:
             await self.explode()
             return True
-        if self.strikes <= 4:
+        if self.strikes <= 4 and self._state == BombState.GAME_STARTED:
             await self._update_time()
             self.timer_speed += 0.25
         self.trigger(ModuleStriked(module))
-        self.sound_system.play_sound(STRIKE_SOUND)
         return False
 
     @property
@@ -321,8 +323,9 @@ class Bomb(EventSource):
         return f"{int(self.time_left // 60):02d}{int(self.time_left % 60):02d}"
 
 
-STRIKE_SOUND = register_sound(Bomb, "strike.wav", AudioLocation.BOMB_ONLY)
 EXPLOSION_SOUND = register_sound(Bomb, "explosion.wav", AudioLocation.PREFER_ROOM)
 TICK_SOUND_SLOW = register_sound(Bomb, "tick_1.0.wav", AudioLocation.BOMB_ONLY)
 TICK_SOUND_MEDIUM = register_sound(Bomb, "tick_1.25.wav", AudioLocation.BOMB_ONLY)
 TICK_SOUND_FAST = register_sound(Bomb, "tick_1.5.wav", AudioLocation.BOMB_ONLY)
+DEFUSED_SOUND = register_sound(Bomb, "bomb_defused.wav", AudioLocation.BOMB_ONLY)
+DEFUSED_FANFARE = register_sound(Bomb, "bomb_defused_fanfare.wav", AudioLocation.ROOM_ONLY)

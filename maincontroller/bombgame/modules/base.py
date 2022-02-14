@@ -6,10 +6,11 @@ from logging import getLogger
 from time import monotonic
 from typing import Tuple, List, TYPE_CHECKING
 
+from bombgame.audio import register_sound, AudioLocation
 from bombgame.bus.messages import (StrikeModuleMessage, SolveModuleMessage, ModuleId, ErrorMessage,
                                    RecoveredErrorMessage, PingMessage, BusMessage, InitCompleteMessage)
 from bombgame.config import MODULE_PING_INTERVAL, MODULE_PING_TIMEOUT
-from bombgame.events import BombError, BombErrorLevel, ModuleStateChanged
+from bombgame.events import BombError, BombErrorLevel, ModuleStateChanged, ModuleDefused
 from bombgame.utils import VersionNumber
 
 if TYPE_CHECKING:
@@ -142,11 +143,13 @@ class Module(ABC):
     async def defuse(self):
         """Called by module code to mark the module as defused."""
         self.state = ModuleState.DEFUSED
+        self._bomb.trigger(ModuleDefused(self))
         self._bomb.trigger(ModuleStateChanged(self))
         await self._bomb.send(SolveModuleMessage(self.bus_id))
 
     async def strike(self, count=True):
         """Called by module code to record a strike on the module."""
+        self._bomb.sound_system.play_sound(STRIKE_SOUND)
         if count:
             if await self._bomb.strike(self):
                 return True
@@ -157,10 +160,8 @@ class Module(ABC):
         return f"<{self.__class__.__name__} serial {self.bus_id.serial} hw {self.hw_version} sw {self.sw_version} at {self._bomb.casing.location(self.location)}>"
 
 
-class NeedyModule(Module, ABC):
-    is_needy = True
-    must_solve = False
-
-
 class NoSolution(Exception):
     """Raised when no solution can be computed."""
+
+
+STRIKE_SOUND = register_sound(Module, "strike.wav", AudioLocation.BOMB_ONLY)

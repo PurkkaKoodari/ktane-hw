@@ -40,7 +40,7 @@ class VanillaCasing(Casing):
     """The bomb casing in the vanilla game."""
 
     capacity = 12
-    widget_capacity = 0
+    widget_capacity = 24
 
     def location(self, index: int) -> str:
         if not 0 <= index < 12:
@@ -50,7 +50,7 @@ class VanillaCasing(Casing):
         return f"{'front' if front else f'back'} side, row {index % 2 + 1}, column {column} (board {index // 4 + 1} port {index % 4 + 1})"
 
     gpio_config = (
-        MCP23017Spec(0x20, (0, 2, 4, 6), (1, 3, 5, 7), ()),
-        MCP23017Spec(0x21, (0, 2, 4, 6), (1, 3, 5, 7), ()),
-        MCP23017Spec(0x22, (0, 2, 4, 6), (1, 3, 5, 7), ()),
+        MCP23017Spec(0x20, (0, 2, 4, 6), (1, 3, 5, 7), (8, 9, 10, 11, 12, 13, 14, 15)),
+        MCP23017Spec(0x21, (0, 2, 4, 6), (1, 3, 5, 7), (8, 9, 10, 11, 12, 13, 14, 15)),
+        MCP23017Spec(0x22, (0, 2, 4, 6), (1, 3, 5, 7), (8, 9, 10, 11, 12, 13, 14, 15)),
     )

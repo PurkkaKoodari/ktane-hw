@@ -24,10 +24,10 @@ const litFills: Record<string, string> = {
 };
 
 export default function SimonSaysModule() {
-  const details = useContext(ModuleContext)!.details as Details;
+  const { state, details } = useContext(ModuleContext)!;
 
   const animation = useMemo(() => {
-    const sequence = details.sequence || [];
+    const sequence = (state === "GAME" && (details as Details).sequence) || [null];
     return (
       ["blue", "yellow", "green", "red"].map((button) => `
       .${button} {
@@ -45,7 +45,7 @@ export default function SimonSaysModule() {
       }
     `).join("\n")
     );
-  }, [details]);
+  }, [state, details]);
 
   return (
     <ModuleBase className="keypad">

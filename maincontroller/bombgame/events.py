@@ -19,6 +19,16 @@ class TimerTick:
         return f"<TimerTick>"
 
 
+class ModuleDefused:
+    """The event raised when a module is defused."""
+
+    def __init__(self, module: Module):
+        self.module = module
+
+    def __repr__(self):
+        return f"<ModuleDefused on {self.module}>"
+
+
 class ModuleStriked:
     """The event raised when a strike occurs on a module."""
 

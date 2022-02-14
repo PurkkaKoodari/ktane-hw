@@ -20,7 +20,7 @@ class Widget(ABC):
 class BatteryHolder(Widget):
     def __init__(self, type_: BatteryType):
         self.type = type_
-        self.batteries = 2 if type_ == "AA" else 1
+        self.batteries = 2 if type_ == BatteryType.AA else 1
 
     def serialize(self):
         return {

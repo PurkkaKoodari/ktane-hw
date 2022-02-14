@@ -10,6 +10,7 @@ from typing import Any, Union, Callable, NamedTuple, Awaitable, Dict, TypeVar, D
 
 K = TypeVar("K")
 V = TypeVar("V")
+T = TypeVar("T")
 
 
 class EventSource:
@@ -64,7 +65,7 @@ class Registry(Dict[K, V]):
         if field is not None:
             self._field = field
 
-    def register(self, id_or_class):
+    def register(self, id_or_class: T) -> T:
         """
         A decorator that adds the decorated class to the registry with all the ids provided as argument.
         """

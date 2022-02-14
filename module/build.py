@@ -64,7 +64,7 @@ def main():
         version_output = check_output([args.arduino_cli, "version"]).decode()
 
         try:
-            version_match = match(r"arduino-cli Version: ([\d.]+)", version_output)
+            version_match = match(r"arduino-cli (?:alpha )?Version: ([\d.]+)", version_output)
             version_str = version_match.group(1)
             version = [int(part) for part in version_str.split(".")]
         except Exception:

@@ -209,11 +209,10 @@ class DMXController:
     def _bomb_changed(self, event: BombChanged):
         event.bomb.add_listener(BombStateChanged, self._bomb_state_change)
         event.bomb.add_listener(TimerTick, self._timer_tick)
+        self._backend.change_scene(SCENE_NORMAL)
 
     def _bomb_state_change(self, event: BombStateChanged):
-        if event.state == BombState.RESETTING:
-            self._backend.change_scene(SCENE_NORMAL)
-        elif event.state == BombState.GAME_STARTING:
+        if event.state == BombState.GAME_STARTING:
             self._backend.change_scene(SCENE_BEFORE_START)
         elif event.state == BombState.GAME_STARTED:
             self._backend.change_scene(SCENE_NORMAL)

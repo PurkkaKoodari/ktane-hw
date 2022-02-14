@@ -5,7 +5,7 @@
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 Adafruit_LEDBackpack matrix = Adafruit_LEDBackpack();
 
-const char *texts[2] = {"VENT GAS?", "DETONATE?"};
+const char *texts[2] = {"PURA PAINETTA?", "R\x01J\x01YT\x01?"};
 
 uint8_t char_ae[8] = {
   0b01010,
@@ -169,7 +169,9 @@ void moduleDefuse() {
 }
 
 void moduleExplode() {
-  moduleReset();
+  state = SLEEP;
+  lcd.clear();
+  lcd.noBacklight();
 }
 
 void moduleLoop() {

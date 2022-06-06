@@ -14,7 +14,6 @@ const messageHandler = (log: (msg: string) => void) => (prevState: BombState | n
         state: msg.state,
       };
     case "add_module":
-      if (prevState!.modules[msg.location] !== null) throw new Error("Duplicate module state received");
       return {
         ...prevState!,
         modules: prevState!.modules.map((prev, index) => (index !== msg.location ? prev : {

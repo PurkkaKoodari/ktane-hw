@@ -69,7 +69,7 @@ class RoomServer(SingleClientWebSocketServer, MessageHandlers):
             self.sound_system = RoomServerSoundSystem(self)
             await self.sound_system.start()
         if ROOM_DMX_ENABLED:
-            self.dmx = await initialize_local_dmx_backend()
+            self.dmx = initialize_local_dmx_backend()
             if self.dmx is not None:
                 await self.dmx.start()
                 self.dmx.add_room_server_handler(self)

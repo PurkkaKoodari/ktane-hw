@@ -1,19 +1,19 @@
-
-# Created by https://www.gitignore.io/api/kicad
-# Edit at https://www.gitignore.io/?templates=kicad
-
 ### KiCad ###
-# For PCBs designed using KiCad: http://www.kicad-pcb.org/
-# Format documentation: http://kicad-pcb.org/help/file-formats/
+# For PCBs designed using KiCad: https://www.kicad.org/
+# Format documentation: https://kicad.org/help/file-formats/
 
 # Temporary files
 *.000
 *.bak
 *.bck
-*.sch-bak
 *.kicad_pcb-bak
+*.kicad_sch-bak
+*-backups
+*.kicad_prl
+*.sch-bak
 *~
 _autosave-*
+\#auto_saved_files\#
 *.tmp
 *-save.pro
 *-save.kicad_pcb
@@ -31,13 +31,11 @@ fp-info-cache
 *.csv
 
 ### KiCad Patch ###
-escue-backup/
+rescue-backup/
 
 *.tsv
 bom/
 
 # Gerber export output
 out/
-
-# End of https://www.gitignore.io/api/kicad
-
+gerber/

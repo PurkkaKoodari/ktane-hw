@@ -32,6 +32,7 @@ MUSIC_FOLDER = join(SOUND_FOLDER, "music")
 AUDIO_EVENT = pygame.USEREVENT
 AUDIO_END_EVENT = pygame.USEREVENT + 1
 MUSIC_END_EVENT = pygame.USEREVENT + 2
+MUSIC_REQUEUE_EVENT = pygame.USEREVENT + 3
 
 # how many seconds to wait before forgetting room audio that hasn't been marked as playing
 UNACKED_ROOM_AUDIO_LIFETIME = 10
@@ -151,6 +152,7 @@ class SoundSystem:
     _playback_channels: List[PlaybackChannel]
     _music: Optional[MusicManager]
     _queued_music: Optional[str]
+    _music_playing: bool
     _pygame_thread: Optional[Thread]
     _pygame_init: Future[None]
     _loop: AbstractEventLoop
@@ -160,6 +162,7 @@ class SoundSystem:
         self._playback_channels = []
         self._music = None
         self._queued_music = None
+        self._music_playing = False
         self._pygame_thread = None
         self._pygame_init = Future()
         self._loop = get_running_loop()
@@ -211,6 +214,11 @@ class SoundSystem:
 
     def _sound_stopped(self, sound: LocalPlayingSound):
         LOGGER.debug("Sound %s ended", sound.filename)
+
+    def _stop_music(self):
+        self._queued_music = None
+        self._music_playing = False
+        pygame.mixer.music.stop()
 
     def _pygame_event_thread(self):
         if self._music:
@@ -281,8 +289,7 @@ class SoundSystem:
                 elif event.type == AUDIO_EVENT and event.subtype == AudioEvent.STOP_ALL:
                     for channel in self._playback_channels:
                         channel.channel.stop()
-                    self._queued_music = None
-                    pygame.mixer.music.stop()
+                    self._stop_music()
 
                 elif event.type == AUDIO_END_EVENT:
                     channel = self._playback_channels[event.code]
@@ -298,26 +305,32 @@ class SoundSystem:
                     elif pygame.mixer.music.get_busy():
                         LOGGER.debug("Queueing music %s", filename)
                         pygame.mixer.music.queue(path)
+                        self._queued_music = filename
                     else:
                         LOGGER.debug("Loading music %s", filename)
                         pygame.mixer.music.load(path)
                         pygame.mixer.music.set_volume(MUSIC_VOLUME)
-                    self._queued_music = filename
+                        self._queued_music = filename
+                    # keep re-queueing on demand
+                    pygame.time.set_timer(MUSIC_REQUEUE_EVENT, int(1000 * event.duration / 2))
 
                 elif event.type == AUDIO_EVENT and event.subtype == AudioEvent.PLAY_MUSIC:
                     self._queued_music = None
+                    self._music_playing = True
                     pygame.mixer.music.play()
 
                 elif event.type == AUDIO_EVENT and event.subtype == AudioEvent.STOP_MUSIC:
-                    self._queued_music = None
-                    pygame.mixer.music.stop()
+                    self._stop_music()
 
                 elif event.type == MUSIC_END_EVENT:
                     if self._queued_music:
-                        LOGGER.debug("Current music ended - continuing to %s", self._queued_music)
+                        LOGGER.debug("Continuing to queued music %s", self._queued_music)
                         self._queued_music = None
+                    elif self._music_playing:
+                        LOGGER.debug("Restarting previous music")
+                        pygame.mixer.music.play()
                     else:
-                        LOGGER.debug("Current music ended - music stopped?")
+                        LOGGER.debug("Music stopped")
 
         except Exception:
             LOGGER.error("Error in pygame audio thread", exc_info=True)
@@ -543,6 +556,7 @@ class MusicManager:
             "subtype": AudioEvent.LOAD_MUSIC,
             "track_name": self._selected_track.name,
             "filename": file,
+            "duration": self._selected_track.loop_duration,
         }))
 
     def _update_music_timer(self, time_left: float):

@@ -75,6 +75,7 @@ class RoomServer(SingleClientWebSocketServer, MessageHandlers):
             if self.dmx is not None:
                 await self.dmx.start()
                 self.dmx.add_room_server_handler(self)
+        LOGGER.info("Room server initialized")
 
     async def stop(self):
         if self.sound_system is not None:

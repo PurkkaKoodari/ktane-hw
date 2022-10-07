@@ -23,4 +23,6 @@
 
 #define NO_STATUS_LED
 
+#define FINNISH
+
 #endif

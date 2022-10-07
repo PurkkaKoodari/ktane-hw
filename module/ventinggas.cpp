@@ -5,7 +5,11 @@
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 Adafruit_LEDBackpack matrix = Adafruit_LEDBackpack();
 
+#ifdef FINNISH
 const char *texts[2] = {"PURA PAINETTA?", "R\x01J\x01YT\x01?"};
+#else
+const char *texts[2] = {"VENT GAS?", "DETONATE?"};
+#endif
 
 uint8_t char_ae[8] = {
   0b01010,
@@ -113,13 +117,17 @@ void moduleInitHardware() {
 }
 
 void moduleReset() {
-  char buf[16];
+  char buf[17];
   state = SLEEP;
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Venting Gas");
   lcd.setCursor(0, 1);
-  sprintf(buf, "HW %d.%d SW %d.%d \x01\x02", VERSION_HW_MAJOR, VERSION_HW_MINOR, VERSION_SW_MAJOR, VERSION_SW_MINOR);
+#ifdef FINNISH
+  snprintf(buf, 17, "HW %d.%d SW %d.%d \x01\x02", VERSION_HW_MAJOR, VERSION_HW_MINOR, VERSION_SW_MAJOR, VERSION_SW_MINOR);
+#else
+  snprintf(buf, 17, "HW %d.%d SW %d.%d EN", VERSION_HW_MAJOR, VERSION_HW_MINOR, VERSION_SW_MAJOR, VERSION_SW_MINOR);
+#endif
   lcd.print(buf);
   lcd.backlight();
 }
@@ -220,10 +228,17 @@ void moduleLoop() {
             if (question == VENT_GAS && answer == YES) {
               state = COMPLETE;
               lcd.clear();
+#ifdef FINNISH
+              lcd.setCursor(4, 0);
+              lcd.print("PAINETTA");
+              lcd.setCursor(4, 1);
+              lcd.print("PURETTU");
+#else
               lcd.setCursor(4, 0);
               lcd.print("VENTING");
               lcd.setCursor(4, 1);
               lcd.print("COMPLETE");
+#endif
             } else {
               state = SLEEP;
               lcd.clear();
@@ -254,10 +269,17 @@ void moduleLoop() {
           nextStep += 400;
         } else {
           lcd.clear();
+#ifdef FINNISH
+          lcd.setCursor(0, 0);
+          lcd.print("PURKAMINEN EST\x01\x01");
+          lcd.setCursor(2, 1);
+          lcd.print("R\x01J\x01HDYKSI\x01");
+#else
           lcd.setCursor(0, 0);
           lcd.print("VENTING PREVENTS");
           lcd.setCursor(3, 1);
           lcd.print("EXPLOSIONS");
+#endif
           step++;
           nextStep += step == 4 ? 1000 : 750;
         }

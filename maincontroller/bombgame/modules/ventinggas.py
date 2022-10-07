@@ -48,7 +48,8 @@ class VentingGasModule(NeedyModule):
         await super().activate()
 
     async def handle_message(self, message: BusMessage):
-        if isinstance(message, VentingGasAnswerMessage) and self.state == ModuleState.GAME and self.needy_state == NeedyState.ACTIVE:
+        if isinstance(message, VentingGasAnswerMessage) \
+                and self.state == ModuleState.GAME and self.needy_state == NeedyState.ACTIVE:
             if message.answer == CORRECT_ANSWERS[self._question]:
                 await self.deactivate()
             else:
@@ -59,7 +60,7 @@ class VentingGasModule(NeedyModule):
     def ui_state(self):
         return {
             "needy_state": self.needy_state.name,
-            "question": self._question.name if self._question is not None else "",
+            "question": self._question and self._question.name,
         }
 
 

@@ -160,7 +160,15 @@ class WiresModule(Module):
         if isinstance(message, WiresUpdateMessage):
             prev_connected = self._connected
             self._connected = list(message.wires)
-            if self.state in (ModuleState.GAME, ModuleState.DEFUSED):
+            if self.state == ModuleState.CONFIGURATION:
+                try:
+                    new_solution = _compute_solution(self._bomb.edgework, self._connected)
+                except NoSolution:
+                    pass
+                else:
+                    self._initial_connected = self._connected[:]
+                    self._solution = new_solution
+            elif self.state in (ModuleState.GAME, ModuleState.DEFUSED):
                 for pos in range(6):
                     # a wire is disconnected when it:
                     if (not self._cut[pos]  # hasn't been cut yet

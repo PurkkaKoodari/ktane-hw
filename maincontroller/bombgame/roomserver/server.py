@@ -32,10 +32,12 @@ class RoomServer(SingleClientWebSocketServer, MessageHandlers):
             message = await wait_for(client.recv(), ROOM_SERVER_AUTH_TIMEOUT)
         except AsyncTimeoutError:
             await close_client_invalid_message(client, "must send auth message upon connecting")
+            return
         try:
             channel, data = parse_room_server_message(message)
         except InvalidMessage as ex:
             await close_client_invalid_message(client, ex.reason)
+            return
         if channel != RoomServerChannel.AUTH:
             await close_client_invalid_message(client, "must send auth message upon connecting")
         if data.get("version") != ROOM_SERVER_VERSION:
@@ -47,7 +49,7 @@ class RoomServer(SingleClientWebSocketServer, MessageHandlers):
         }, client)
 
     async def _handle_message(self, client: WebSocketServerProtocol, data: Union[str, bytes]):
-        LOGGER.info(str(data))
+        LOGGER.debug(str(data))
         await self._handle(data)
 
     async def send(self, channel: RoomServerChannel, payload: dict, client: Optional[WebSocketServerProtocol] = None):

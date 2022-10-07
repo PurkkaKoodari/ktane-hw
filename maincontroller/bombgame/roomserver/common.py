@@ -9,13 +9,14 @@ from bombgame.websocket import InvalidMessage
 LOGGER = getLogger("RoomServer")
 
 # compared against the string sent by the client to identify outdated servers
-ROOM_SERVER_VERSION = "0.1-a1"
+ROOM_SERVER_VERSION = "0.1-a2"
 
 
 class RoomServerChannel(Enum):
     AUTH = "auth"
     DMX = "dmx"
     AUDIO = "audio"
+    MUSIC = "music"
     WEB_UI = "web_ui"
 
 

@@ -11,7 +11,7 @@ from bombgame.bus.bus import BombBus
 from bombgame.bus.messages import (BusMessage, ResetMessage, AnnounceMessage, DefuseBombMessage, ExplodeBombMessage,
                                    ModuleId, LaunchGameMessage, StartTimerMessage)
 from bombgame.casings import Casing
-from bombgame.config import MODULE_RESET_PERIOD, MODULE_ANNOUNCE_TIMEOUT, DEFAULT_MAX_STRIKES
+from bombgame.config import MODULE_RESET_PERIOD, MODULE_ANNOUNCE_TIMEOUT, DEFAULT_MAX_STRIKES, DEFAULT_STARTING_TIME
 from bombgame.events import (BombErrorLevel, BombError, BombModuleAdded, ModuleStateChanged, BombStateChanged,
                              ModuleStriked, TimerTick)
 from bombgame.gpio import AbstractGpio, ModuleReadyChange
@@ -58,6 +58,7 @@ class Bomb(EventSource):
         self.modules_by_location = {}
         self.max_strikes = DEFAULT_MAX_STRIKES
         self.strikes = 0
+        self.starting_time = DEFAULT_STARTING_TIME
         self.time_left = 0.0
         self.timer_speed = 1.0
         self.edgework = Edgework()
@@ -114,8 +115,8 @@ class Bomb(EventSource):
         # start pinging modules that have not sent anything in a while
         self.create_task(self._ping_loop())
         # load sounds for the modules
-        # TODO do this in an auxiliary thread (but that will require us to move all audio stuff in said thread)
         self.sound_system.load_sounds({Bomb, Module, NeedyModule} | set(type(module) for module in self.modules))
+        self.sound_system.init_music()
         # wait for all modules to initialize
         if not all(module.state == ModuleState.CONFIGURATION for module in self.modules):
             self._state = BombState.INITIALIZING_MODULES
@@ -126,7 +127,7 @@ class Bomb(EventSource):
         LOGGER.debug("Initialization complete")
         self.trigger(BombStateChanged(BombState.INITIALIZED))
         # TODO implement an actual solution generation system
-        self.time_left = 300.0
+        self.time_left = self.starting_time
         for module in self.modules:
             module.generate()
             self.trigger(ModuleStateChanged(module))
@@ -239,6 +240,7 @@ class Bomb(EventSource):
             await module.send_state()
             module.state = ModuleState.GAME
         await self.send(LaunchGameMessage(ModuleId.BROADCAST))
+        self.sound_system.play_music()
 
     def start_timer(self):
         """Starts the timer."""
@@ -267,6 +269,7 @@ class Bomb(EventSource):
         if self.time_left == 0.0:
             await self.explode()
             return
+        self.sound_system.update_music_timer(min(1.0, self.time_left / self.starting_time))
         if prev_second != curr_second:
             self.trigger(TimerTick(self))
             if self.timer_speed <= 1.0:
@@ -294,6 +297,7 @@ class Bomb(EventSource):
                 self._state = BombState.DEFUSED
                 self.trigger(BombStateChanged(BombState.DEFUSED))
                 await self.send(DefuseBombMessage(ModuleId.BROADCAST))
+                self.sound_system.stop_music()
                 self.sound_system.play_sound(DEFUSED_SOUND)
                 self.sound_system.play_sound(DEFUSED_FANFARE)
 

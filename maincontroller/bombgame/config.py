@@ -18,6 +18,8 @@ ROOM_SERVER_AUTH_TIMEOUT = 2
 
 # whether or not audio playback commands should be sent to the room server
 ROOM_AUDIO_ENABLED = True
+# whether or not music should be played by the room server
+ROOM_MUSIC_ENABLED = True
 # whether or not DMX commands should be sent to the room server
 ROOM_DMX_ENABLED = True
 # whether or not to host the Web UI on the room server
@@ -29,6 +31,9 @@ DMX_SERVER = None
 
 # how many simultaneous sound effects to support
 AUDIO_CHANNELS = 16
+# sound and music volume (should be less than 1 to avoid mix clipping)
+SOUND_VOLUME = 0.25
+MUSIC_VOLUME = 0.25
 
 # how often to manually check GPIO pins for changes
 GPIO_POLL_INTERVAL = 1.0
@@ -63,5 +68,7 @@ MODULE_PING_TIMEOUT = 1.0
 # the time spent in the pre-game wait
 GAME_START_DELAY = 5
 
+# the default maximum time
+DEFAULT_STARTING_TIME = 900.0
 # the default number of strikes before the bomb explodes
 DEFAULT_MAX_STRIKES = 3
